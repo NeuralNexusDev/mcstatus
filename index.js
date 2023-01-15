@@ -22,7 +22,8 @@ app.get("/", async (req, res) => {
                 <p>https://api.neuralnexus.dev/api/mcstatus/icon/your.server.ip</p>
             `);
     } catch (err) {
-        res.status(500).send(err);
+        res.status(500);
+        console.error(err);
     }
 });
 
@@ -42,11 +43,17 @@ app.get("/:address", async (req, res) => {
                 console.log(error);
             });
 
-        const motdhtml = motdParser.JSONToHtml(serverData.description);
-
+        const description = serverData.description;
         let motdtext = "";
-        for (const element of serverData.description.extra) {
-            motdtext += element.text
+        let motdhtml;
+        if (description.hasOwnProperty("extra")) {
+            motdhtml = motdParser.JSONToHtml(description);
+            for (const element of description.extra) {
+                motdtext += element.text
+            }
+        } else {
+            motdtext = motdParser.cleanTags(description);
+            motdhtml = motdParser.textToHTML(description);
         }
 
         if (req.get("accept")===undefined) {
@@ -81,7 +88,8 @@ app.get("/:address", async (req, res) => {
                 .json(serverData);
         }
     } catch (err) {
-        res.status(500).send(err);
+        res.status(500);
+        console.error(err);
     }
 });
 
@@ -101,6 +109,7 @@ app.get("/icon/:address", async (req, res) => {
             .status(200)
             .send(Buffer.from(serverData.favicon.replace("data:image/png;base64,", ""), 'base64'));
     } catch (err) {
-        res.status(500).send(err);
+        res.status(500);
+        console.error(err);
     }
 });
