@@ -1,2 +1,2 @@
 # mcstatus
-Repo for http://api.neuralnexus.dev/api/mcstatus/
+Repo for https://api.neuralnexus.dev/api/mcstatus/

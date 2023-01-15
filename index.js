@@ -1,6 +1,6 @@
 import express from "express";
 import bodyParser from "body-parser";
-import { MinecraftServerListPing, MinecraftQuery } from "minecraft-status";
+import { MinecraftServerListPing } from "minecraft-status";
 import motdParser from '@sfirew/mc-motd-parser'
 import dns from 'dns';
 
@@ -20,7 +20,9 @@ app.get("/", async (req, res) => {
                 <title>NeuralNexus.dev</title>
                 <h1>How To:</h1>
                 <p>https://api.neuralnexus.dev/api/mcstatus/your.server.ip</p>
+                <p>https://api.neuralnexus.dev/api/mcstatus/your.server.ip?port=25566</>
                 <p>https://api.neuralnexus.dev/api/mcstatus/icon/your.server.ip</p>
+                <p>https://api.neuralnexus.dev/api/mcstatus/icon/your.server.ip?port=25566</>
             `);
     } catch (err) {
         res.status(500);
@@ -36,15 +38,15 @@ app.get("/:address", async (req, res) => {
         const address = req.params.address;
         if (address==="favicon.ico") return
 
-        const port = await (new Promise((resolve) => {
-                dns.resolveSrv("_minecraft._tcp." + address, (err, addresses) => {
-                    try {
-                        if (err) console.log(err);
-                        resolve(addresses[0].port);
-                    } catch (err) {
-                        resolve(25565)
-                    }
-                });
+        let port = req.query.port || await (new Promise((resolve) => {
+            dns.resolveSrv("_minecraft._tcp." + address, (err, addresses) => {
+                try {
+                    if (err) console.log(err);
+                    resolve(addresses[0].port);
+                } catch (err) {
+                    resolve(25565)
+                }
+            });
         }));
 
         const serverData = await MinecraftServerListPing.ping(4, address, port)
