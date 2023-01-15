@@ -2,6 +2,7 @@ import express from "express";
 import bodyParser from "body-parser";
 import { MinecraftServerListPing, MinecraftQuery } from "minecraft-status";
 import motdParser from '@sfirew/mc-motd-parser'
+import dns from 'dns';
 
 const port = process.env.PORT || 3000
 
@@ -33,9 +34,20 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.get("/:address", async (req, res) => {
     try {
         const address = req.params.address;
+        if (address==="favicon.ico") return
 
-        // MinecraftQuery.query(address)
-        const serverData = await MinecraftServerListPing.ping(4, address)
+        const port = await (new Promise((resolve) => {
+                dns.resolveSrv("_minecraft._tcp." + address, (err, addresses) => {
+                    try {
+                        if (err) console.log(err);
+                        resolve(addresses[0].port);
+                    } catch (err) {
+                        resolve(25565)
+                    }
+                });
+        }));
+
+        const serverData = await MinecraftServerListPing.ping(4, address, port)
             .then(response => {
                 return response;
             })
