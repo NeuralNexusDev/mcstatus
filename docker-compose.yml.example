@@ -1,0 +1,11 @@
+---
+version: "3.8"
+services:
+  mcstatus:
+    image: p0t4t0sandwich/neuralnexus:mcstatus
+    container_name: mcstatus
+    environment:
+      - TZ=UTC
+    ports:
+      - "0.0.0.0:3001:3000"
+    restart: unless-stopped
