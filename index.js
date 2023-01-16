@@ -8,6 +8,9 @@ const port = process.env.PORT || 3000
 
 const app = express();
 
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+
 app.listen(port, () => {
     console.log(`MC Status REST API running on port ${port}`);
 });
@@ -30,15 +33,12 @@ app.get("/", async (req, res) => {
     }
 });
 
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
-
 app.get("/:address", async (req, res) => {
     try {
         const address = req.params.address;
         if (address==="favicon.ico") return
 
-        let port = req.query.port || await (new Promise((resolve) => {
+        const port = req.query.port || await (new Promise((resolve) => {
             dns.resolveSrv("_minecraft._tcp." + address, (err, addresses) => {
                 try {
                     if (err) console.log(err);
@@ -57,29 +57,43 @@ app.get("/:address", async (req, res) => {
                 console.log(error);
             });
 
-        const description = serverData.description;
         let motdtext = "";
         let motdhtml;
-        if (description.hasOwnProperty("extra")) {
-            motdhtml = motdParser.JSONToHtml(description);
-            for (const element of description.extra) {
-                motdtext += element.text
+        let players;
+        let version;
+        let favicon;
+        if (serverData!==undefined) {
+            res.status(200)
+            const description = serverData.description;
+            if (description.hasOwnProperty("extra")) {
+                motdhtml = motdParser.JSONToHtml(description);
+                for (const element of description.extra) {
+                    motdtext += element.text
+                }
+            } else {
+                motdtext = motdParser.cleanTags(description);
+                motdhtml = motdParser.textToHTML(description);
             }
+            players = `${serverData.players.online}/${serverData.players.max}`;
+            version = serverData.version.name;
+            favicon = serverData.favicon;
         } else {
-            motdtext = motdParser.cleanTags(description);
-            motdhtml = motdParser.textToHTML(description);
+            res.status(400)
+            motdtext = "Server Offline";
+            motdhtml = "<p>Server Offline</p>";
+            players = "0/0"
+            version = "Minecraft"
+            favicon = ""
         }
 
         if (req.get("accept")===undefined) {
-            res.type("text/html")
-                .status(200)
-                .send(`
+            res.type("text/html").send(`
                 <meta content="IP: ${address}" property="og:title" />
                 <meta content="Powered by NeuralNexus.dev" property="og:site_name">
                 <meta property="og:description" content="
                         ${motdtext}
-                        Players: ${serverData.players.online}/${serverData.players.max}
-                        Version: ${serverData.version.name}
+                        Players: ${players}
+                        Version: ${version}
                         "/>
                 <meta content="https://api.neuralnexus.dev/api/mcstatus/${address}" property="og:url" />
                 <meta content="https://api.neuralnexus.dev/api/mcstatus/icon/${address}" property="og:image" />
@@ -87,18 +101,16 @@ app.get("/:address", async (req, res) => {
             `);
         } else if (req.get("accept").includes("text/html")) {
             res.type("text/html")
-                .status(200)
                 .send(`
                 <title>${address}</title>
                 ${motdhtml}
                 <br>
-                <img src="${serverData.favicon}" alt="icon" />
-                <p>Players: ${serverData.players.online}/${serverData.players.max}</p>
-                <p>Version: ${serverData.version.name}</p>
+                <img src="${favicon}" alt="icon" />
+                <p>Players: ${players}</p>
+                <p>Version: ${version}</p>
             `);
         } else {
             res.type("application/json")
-                .status(200)
                 .json(serverData);
         }
     } catch (err) {
@@ -118,10 +130,14 @@ app.get("/icon/:address", async (req, res) => {
             .catch(error => {
                 console.log(error);
             });
-
-        res.type("image/png")
+        
+        if (serverData!==undefined) {
+            res.type("image/png")
             .status(200)
             .send(Buffer.from(serverData.favicon.replace("data:image/png;base64,", ""), 'base64'));
+        } else {
+            res.status(400).json({});
+        }
     } catch (err) {
         res.status(500);
         console.error(err);
