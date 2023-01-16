@@ -71,8 +71,16 @@ app.get("/:address", async (req, res) => {
                     motdtext += element.text
                 }
             } else {
-                motdtext = motdParser.cleanTags(description);
-                motdhtml = motdParser.textToHTML(description);
+                try {
+                    motdtext = motdParser.cleanTags(description);
+                } catch {
+                    motdtext = description?.text;
+                }
+                try{
+                    motdhtml = motdParser.textToHTML(description);
+                } catch {
+                    motdhtml = description?.text;
+                }
             }
             players = `${serverData.players.online}/${serverData.players.max}`;
             version = serverData.version.name;
