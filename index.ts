@@ -1,32 +1,53 @@
 import express from "express";
 import bodyParser from "body-parser";
-import { MinecraftServerListPing } from "minecraft-status";
+import { MinecraftServerListPing, MinecraftQuery } from "minecraft-status";
 import motdParser from '@sfirew/mc-motd-parser'
-import dns from 'dns';
+import dnsPromises from 'dns';
 
 
-async function getMCStatus(address: string, port?: number): Promise<any> {
-    try {
-        // SRV lookup and port fallback
-        const srv_port: number = port || await (new Promise((resolve) => {
-            dns.resolveSrv("_minecraft._tcp." + address, (err, addresses) => {
-                try {
-                    if (err) console.log(err);
-                    resolve(addresses[0].port);
-                } catch (err) {
-                    resolve(25565)
-                }
-            });
-        }));
+// Interfaces matching the protobuffs
+interface ServerInfo {
+    host: string,
+    port: number
+}
 
-        // Server status lookup
-        const serverData = await MinecraftServerListPing.ping(4, address, srv_port);
-        return serverData;
-    } catch (err) {
-        // Error response
-        console.error(err);
+interface StatusResponse {
+    name?: string,
+    map?: string,
+    password?: boolean,
+    maxplayers?: number,
+//    players?: Gamedig.Player[],
+//    bots?: Gamedig.Player[],
+    connect?: string,
+    ping?: number
+}
+
+
+async function getMCStatus(address: string, port?: number, query?: number): Promise<any> {
+    // SRV lookup and port fallback
+    const srvPort: number = port || await (new Promise((resolve) => {
+        dnsPromises.resolveSrv("_minecraft._tcp." + address, (error, addresses) => {
+            try {
+                if (error) console.log(error);
+                resolve(addresses[0].port);
+            } catch (err) {
+                console.log(err);
+                resolve(25565);
+            }
+        });
+    }));
+
+    const queryPort: number = query || srvPort;
+
+    // Server status lookup
+    const serverData = await MinecraftServerListPing.ping(4, address, srvPort)
+    .then(response => {
+        return response;
+    }).catch(error => {
+        console.log(error);
         return undefined;
-    }
+    });
+    return serverData;
 }
 
 const REST_PORT: number = <number><unknown>process.env.REST_PORT || 3000
@@ -59,9 +80,12 @@ app.get("/", async (req, res) => {
 app.get("/:address", async (req, res) => {
     try {
         const address = req.params.address;
-        if (address==="favicon.ico") return
+        const port: number = <number><unknown>req.query.port;
+        const addressStr = port ? `${address}?port=${port}` : address;
 
-        const serverData = await getMCStatus(address, <number><unknown>req.query.port);
+        if (address==="favicon.ico" || address==="undefined" || address===undefined) return
+
+        const serverData = await getMCStatus(address, port);
 
         let motdtext = "";
         let motdhtml: string;
@@ -109,14 +133,14 @@ app.get("/:address", async (req, res) => {
                         Players: ${players}
                         Version: ${version}
                         "/>
-                <meta content="https://api.neuralnexus.dev/api/mcstatus/${address}" property="og:url" />
-                <meta content="https://api.neuralnexus.dev/api/mcstatus/icon/${address}" property="og:image" />
+                <meta content="https://api.neuralnexus.dev/api/mcstatus/${addressStr}" property="og:url" />
+                <meta content="https://api.neuralnexus.dev/api/mcstatus/icon/${addressStr}" property="og:image" />
                 <meta content="#7C0014" data-react-helmet="true" name="theme-color" />
             `);
         } else if (req.get("accept")?.includes("text/html")) {
             res.type("text/html")
                 .send(`
-                <title>${address}</title>
+                <title>${port ? `${address}:${port}` : address}</title>
                 ${motdhtml}
                 <br>
                 <img src="${favicon}" alt="icon" />
@@ -135,17 +159,9 @@ app.get("/:address", async (req, res) => {
 
 app.get("/icon/:address", async (req, res) => {
     try {
-        const address = req.params.address;
-
-        const serverData = await MinecraftServerListPing.ping(4, address)
-            .then(response => {
-                return response;
-            })
-            .catch(error => {
-                console.log(error);
-            });
+        const serverData = await getMCStatus(req.params.address, <number><unknown>req.query.port);
         
-        if (serverData!==undefined) {
+        if (serverData?.favicon!==undefined) {
             res.type("image/png")
             .status(200)
             .send(Buffer.from(serverData.favicon.replace("data:image/png;base64,", ""), 'base64'));

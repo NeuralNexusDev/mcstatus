@@ -1,11 +1,10 @@
 syntax="proto3";
 
 service Status {
-    rpc GetStatus(ServerInfo) returns (StatusResponse);
+    rpc GetMCStatus(ServerInfo) returns (StatusResponse);
 }
 
 message ServerInfo {
-    string game = 1;
     string host = 2;
     int32 port = 3;
 }
