@@ -4,3 +4,5 @@ Dockerfile
 .gitignore
 .dockerignore
 docker-compose.yml
+.github
+docker-compose.yml.example

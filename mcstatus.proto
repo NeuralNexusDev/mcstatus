@@ -1,0 +1,30 @@
+syntax="proto3";
+
+service Status {
+    rpc GetStatus(ServerInfo) returns (StatusResponse);
+}
+
+message ServerInfo {
+    string game = 1;
+    string host = 2;
+    int32 port = 3;
+}
+
+message Player{
+    string name = 1;
+    int32 ping = 2;
+    int32 score = 3;
+    string team = 4;
+    string address = 5;
+}
+
+message StatusResponse {
+    string name = 1;
+    string map = 2;
+    bool password = 3;
+    int32 maxplayers = 4;
+    repeated Player players = 5;
+    repeated Player bots = 6;
+    string connect = 7;
+    int32 ping = 8;
+}

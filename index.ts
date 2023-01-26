@@ -4,15 +4,38 @@ import { MinecraftServerListPing } from "minecraft-status";
 import motdParser from '@sfirew/mc-motd-parser'
 import dns from 'dns';
 
-const port = process.env.PORT || 3000
 
+async function getMCStatus(address: string, port?: number): Promise<any> {
+    try {
+        // SRV lookup and port fallback
+        const srv_port: number = port || await (new Promise((resolve) => {
+            dns.resolveSrv("_minecraft._tcp." + address, (err, addresses) => {
+                try {
+                    if (err) console.log(err);
+                    resolve(addresses[0].port);
+                } catch (err) {
+                    resolve(25565)
+                }
+            });
+        }));
+
+        // Server status lookup
+        const serverData = await MinecraftServerListPing.ping(4, address, srv_port);
+        return serverData;
+    } catch (err) {
+        // Error response
+        console.error(err);
+        return undefined;
+    }
+}
+
+const REST_PORT: number = <number><unknown>process.env.REST_PORT || 3000
 const app = express();
-
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-app.listen(port, () => {
-    console.log(`MC Status REST API running on port ${port}`);
+app.listen(REST_PORT, () => {
+    console.log(`MC Status REST API running on port ${REST_PORT}`);
 });
 
 app.get("/", async (req, res) => {
@@ -23,9 +46,9 @@ app.get("/", async (req, res) => {
                 <title>NeuralNexus.dev</title>
                 <h1>How To:</h1>
                 <p>https://api.neuralnexus.dev/api/mcstatus/your.server.ip</p>
-                <p>https://api.neuralnexus.dev/api/mcstatus/your.server.ip?port=25566</>
+                <p>https://api.neuralnexus.dev/api/mcstatus/your.server.ip?port=25566</p>
                 <p>https://api.neuralnexus.dev/api/mcstatus/icon/your.server.ip</p>
-                <p>https://api.neuralnexus.dev/api/mcstatus/icon/your.server.ip?port=25566</>
+                <p>https://api.neuralnexus.dev/api/mcstatus/icon/your.server.ip?port=25566</p>
             `);
     } catch (err) {
         res.status(500);
@@ -38,37 +61,20 @@ app.get("/:address", async (req, res) => {
         const address = req.params.address;
         if (address==="favicon.ico") return
 
-        const port = req.query.port || await (new Promise((resolve) => {
-            dns.resolveSrv("_minecraft._tcp." + address, (err, addresses) => {
-                try {
-                    if (err) console.log(err);
-                    resolve(addresses[0].port);
-                } catch (err) {
-                    resolve(25565)
-                }
-            });
-        }));
-
-        const serverData = await MinecraftServerListPing.ping(4, address, port)
-            .then(response => {
-                return response;
-            })
-            .catch(error => {
-                console.log(error);
-            });
+        const serverData = await getMCStatus(address, <number><unknown>req.query.port);
 
         let motdtext = "";
-        let motdhtml;
-        let players;
-        let version;
-        let favicon;
+        let motdhtml: string;
+        let players: string;
+        let version: string;
+        let favicon: string;
         if (serverData!==undefined) {
-            res.status(200)
+            res.status(200);
             const description = serverData.description;
             if (description.hasOwnProperty("extra")) {
                 motdhtml = motdParser.JSONToHtml(description);
                 for (const element of description.extra) {
-                    motdtext += element.text
+                    motdtext += element.text;
                 }
             } else {
                 try {
@@ -86,12 +92,12 @@ app.get("/:address", async (req, res) => {
             version = serverData.version.name;
             favicon = serverData.favicon;
         } else {
-            res.status(400)
+            res.status(400);
             motdtext = "Server Offline";
             motdhtml = "<p>Server Offline</p>";
-            players = "0/0"
-            version = "Minecraft"
-            favicon = ""
+            players = "0/0";
+            version = "Minecraft";
+            favicon = "";
         }
 
         if (req.get("accept")===undefined) {
@@ -107,7 +113,7 @@ app.get("/:address", async (req, res) => {
                 <meta content="https://api.neuralnexus.dev/api/mcstatus/icon/${address}" property="og:image" />
                 <meta content="#7C0014" data-react-helmet="true" name="theme-color" />
             `);
-        } else if (req.get("accept").includes("text/html")) {
+        } else if (req.get("accept")?.includes("text/html")) {
             res.type("text/html")
                 .send(`
                 <title>${address}</title>

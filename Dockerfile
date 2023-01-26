@@ -6,6 +6,8 @@ COPY package.json ./
 
 RUN npm install
 
-COPY ./index.js .
+COPY ./* ./
 
-CMD [ "node", "."]
+RUN /app/node_modules/typescript/bin/tsc -p /app/tsconfig.json
+
+CMD ["node", "./dist/index.js"]
