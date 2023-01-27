@@ -1,6 +1,7 @@
 import express from "express";
 import bodyParser from "body-parser";
 import { MinecraftServerListPing, MinecraftQuery } from "minecraft-status";
+import Query from "minecraft-query";
 import motdParser from '@sfirew/mc-motd-parser'
 import dnsPromises from 'dns';
 
@@ -8,18 +9,17 @@ import dnsPromises from 'dns';
 // Interfaces matching the protobuffs
 interface ServerInfo {
     host: string,
-    port: number
+    port: number,
+    query_port: number
 }
 
 interface StatusResponse {
     name?: string,
     map?: string,
-    password?: boolean,
     maxplayers?: number,
-//    players?: Gamedig.Player[],
-//    bots?: Gamedig.Player[],
+    players?: string[],
     connect?: string,
-    ping?: number
+    favicon?: string
 }
 
 
@@ -28,16 +28,30 @@ async function getMCStatus(address: string, port?: number, query?: number): Prom
     const srvPort: number = port || await (new Promise((resolve) => {
         dnsPromises.resolveSrv("_minecraft._tcp." + address, (error, addresses) => {
             try {
+                // Return SRV port
                 if (error) console.log(error);
                 resolve(addresses[0].port);
             } catch (err) {
+                // Fallback to default port
                 console.log(err);
                 resolve(25565);
             }
         });
     }));
-
+    // Default query port to SRV port if not specified
     const queryPort: number = query || srvPort;
+
+    // Server query lookup
+    const q = new Query({host: address, port: queryPort, timeout: 3000});
+    const serverQuery = await q.fullStat()
+    .then(success => {
+        q.close();
+        return success;
+    }).catch(error => {
+        q.close();
+        console.log(error);
+        return undefined;
+    });
 
     // Server status lookup
     const serverData = await MinecraftServerListPing.ping(4, address, srvPort)
@@ -47,6 +61,12 @@ async function getMCStatus(address: string, port?: number, query?: number): Prom
         console.log(error);
         return undefined;
     });
+
+    
+
+    // console.log(serverQuery);
+    // console.log(serverData);
+
     return serverData;
 }
 
