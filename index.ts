@@ -4,6 +4,7 @@ import { MinecraftServerListPing, MinecraftQuery } from "minecraft-status";
 import Query from "minecraft-query";
 import motdParser from '@sfirew/mc-motd-parser'
 import dnsPromises from 'dns';
+import fs from 'fs';
 
 
 // Interfaces matching the protobuffs
@@ -13,17 +14,23 @@ interface ServerInfo {
     query_port: number
 }
 
+interface Player {
+    name?: string | undefined;
+}
+
 interface StatusResponse {
     name?: string,
+    nameHTML?: string,
     map?: string,
     maxplayers?: number,
-    players?: string[],
+    onlineplayers?: number,
+    players?: Player[],
     connect?: string,
+    version?: string,
     favicon?: string
 }
 
-
-async function getMCStatus(address: string, port?: number, query?: number): Promise<any> {
+async function getMCStatus(address: string, port?: number, query?: number): Promise<StatusResponse> {
     // SRV lookup and port fallback
     const srvPort: number = port || await (new Promise((resolve) => {
         dnsPromises.resolveSrv("_minecraft._tcp." + address, (error, addresses) => {
@@ -38,36 +45,76 @@ async function getMCStatus(address: string, port?: number, query?: number): Prom
             }
         });
     }));
-    // Default query port to SRV port if not specified
-    const queryPort: number = query || srvPort;
-
-    // Server query lookup
-    const q = new Query({host: address, port: queryPort, timeout: 3000});
-    const serverQuery = await q.fullStat()
-    .then(success => {
-        q.close();
-        return success;
-    }).catch(error => {
-        q.close();
-        console.log(error);
-        return undefined;
-    });
 
     // Server status lookup
-    const serverData = await MinecraftServerListPing.ping(4, address, srvPort)
-    .then(response => {
+    const serverStatus = await MinecraftServerListPing.ping(4, address, srvPort)
+    .then((response: any) => {
         return response;
-    }).catch(error => {
+    }).catch((error: any) => {
         console.log(error);
         return undefined;
     });
 
-    
+    // Server online response
+    if (serverStatus) {
+        const statusResponse: StatusResponse = {
+            name: "",
+            nameHTML: motdParser.JSONToHtml(serverStatus.description),
+            map: serverStatus.version.name,
+            maxplayers: serverStatus.players.max,
+            onlineplayers: serverStatus.players.online,
+            players: serverStatus.players.sample,
+            connect: `${address}:${srvPort}`,
+            version: serverStatus.version.name,
+            favicon: serverStatus.favicon
+        }
 
-    // console.log(serverQuery);
-    // console.log(serverData);
+        // Default query port to SRV port if not specified
+        const queryPort: number = query || srvPort;
 
-    return serverData;
+        // Server query lookup
+        const q = new Query({host: address, port: queryPort, timeout: 3000});
+        const serverQuery = await q.fullStat()
+        .then((success: any) => {
+            q.close();
+            return success;
+        }).catch((error: any) => {
+            q.close();
+            console.log(error);
+            return undefined;
+        });
+
+        // Add query data to status response
+        if (serverQuery) {
+            statusResponse.name = serverQuery.motd.replaceAll("�", "§");
+            statusResponse.players = serverQuery.players;
+            
+        } else {
+            if (serverStatus.description.hasOwnProperty("extra")) {
+                for (const element of serverStatus.description.extra) {
+                    statusResponse.name += element.text;
+                }
+            } else {
+                statusResponse.name = motdParser.cleanTags(serverStatus.description);
+            }
+        }
+
+        return statusResponse;
+
+    // Server offline response
+    } else {
+        return {
+            name: "Server Offline",
+            nameHTML: "<p>Server Offline</p>",
+            map: "Minecraft",
+            maxplayers: 0,
+            onlineplayers: 0,
+            players: [],
+            connect: `${address}:${srvPort}`,
+            version: "Minecraft",
+            favicon: ""
+        }
+    }
 }
 
 const REST_PORT: number = <number><unknown>process.env.REST_PORT || 3000
@@ -99,51 +146,36 @@ app.get("/", async (req, res) => {
 
 app.get("/:address", async (req, res) => {
     try {
+        // Get address and port from request
         const address = req.params.address;
         const port: number = <number><unknown>req.query.port;
-        const addressStr = port ? `${address}?port=${port}` : address;
+        const queryPort: number = <number><unknown>req.query.query;
 
+        // Build response address string
+        let addressStr = port ? `${address}?port=${port}` : address;
+        addressStr = queryPort ? `${addressStr}?query=${queryPort}` : addressStr;
+
+        // Ignore favicon requests
         if (address==="favicon.ico" || address==="undefined" || address===undefined) return
 
-        const serverData = await getMCStatus(address, port);
+        // Get server status
+        const serverResponse = await getMCStatus(address, port, queryPort);
 
-        let motdtext = "";
-        let motdhtml: string;
-        let players: string;
-        let version: string;
-        let favicon: string;
-        if (serverData!==undefined) {
+        // Initialize response variables
+        let motdtext: string = motdParser.cleanTags(serverResponse.name);
+        let motdhtml: string = serverResponse.nameHTML;
+        let players: string = `${serverResponse.onlineplayers}/${serverResponse.maxplayers}`;
+        let version: string = serverResponse.version;
+        let favicon: string = serverResponse.favicon;
+
+        // Http status code based on server status
+        if (serverResponse.name !== "Server Offline") {
             res.status(200);
-            const description = serverData.description;
-            if (description.hasOwnProperty("extra")) {
-                motdhtml = motdParser.JSONToHtml(description);
-                for (const element of description.extra) {
-                    motdtext += element.text;
-                }
-            } else {
-                try {
-                    motdtext = motdParser.cleanTags(description);
-                } catch {
-                    motdtext = description?.text;
-                }
-                try{
-                    motdhtml = motdParser.textToHTML(description);
-                } catch {
-                    motdhtml = description?.text;
-                }
-            }
-            players = `${serverData.players.online}/${serverData.players.max}`;
-            version = serverData.version.name;
-            favicon = serverData.favicon;
         } else {
             res.status(400);
-            motdtext = "Server Offline";
-            motdhtml = "<p>Server Offline</p>";
-            players = "0/0";
-            version = "Minecraft";
-            favicon = "";
         }
 
+        // Discord embed response
         if (req.get("accept")===undefined) {
             res.type("text/html").send(`
                 <meta content="IP: ${address}" property="og:title" />
@@ -157,6 +189,8 @@ app.get("/:address", async (req, res) => {
                 <meta content="https://api.neuralnexus.dev/api/mcstatus/icon/${addressStr}" property="og:image" />
                 <meta content="#7C0014" data-react-helmet="true" name="theme-color" />
             `);
+
+        // HTML response
         } else if (req.get("accept")?.includes("text/html")) {
             res.type("text/html")
                 .send(`
@@ -169,7 +203,7 @@ app.get("/:address", async (req, res) => {
             `);
         } else {
             res.type("application/json")
-                .json(serverData);
+                .json(serverResponse);
         }
     } catch (err) {
         res.status(500);
@@ -179,17 +213,19 @@ app.get("/:address", async (req, res) => {
 
 app.get("/icon/:address", async (req, res) => {
     try {
-        const serverData = await getMCStatus(req.params.address, <number><unknown>req.query.port);
-        
-        if (serverData?.favicon!==undefined) {
+        const serverResponse = await getMCStatus(req.params.address, <number><unknown>req.query.port, <number><unknown>req.query.query);
+
+        if (serverResponse?.favicon!==undefined && serverResponse.favicon!=="") {
             res.type("image/png")
             .status(200)
-            .send(Buffer.from(serverData.favicon.replace("data:image/png;base64,", ""), 'base64'));
+            .send(Buffer.from(serverResponse.favicon.replace("data:image/png;base64,", ""), 'base64'));
         } else {
-            res.status(400).json({});
+            res.type("image/png")
+            .status(400)
+            .send(Buffer.from(fs.readFileSync("./default.png")));
         }
     } catch (err) {
-        res.status(500);
         console.error(err);
+        res.status(500).json({error: err});
     }
 });
