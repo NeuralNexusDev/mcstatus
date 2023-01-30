@@ -99,6 +99,14 @@ async function getMCStatus(address: string, port?: number, query?: number): Prom
             statusResponse.players = serverQuery.players;
             
         } else {
+            // Playercount mismatch between sample and online
+            if (serverStatus.players.sample.length !== serverStatus.players.online) {
+                statusResponse.players = [];
+                for (let i = 0; i < serverStatus.players.online; i++) {
+                    statusResponse.players.push({ name: "" });
+                }
+            }
+            // MOTD parsing
             if (serverStatus.description.hasOwnProperty("extra")) {
                 for (const element of serverStatus.description.extra) {
                     statusResponse.name += element.text;
