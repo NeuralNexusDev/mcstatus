@@ -1,3 +1,6 @@
+const PROTO_PATH = './mcstatus.proto';
+import { GrpcObject, loadPackageDefinition, Server, ServerCredentials } from '@grpc/grpc-js';
+import { loadSync, PackageDefinition } from '@grpc/proto-loader';
 import express from "express";
 import bodyParser from "body-parser";
 import { MinecraftServerListPing, MinecraftQuery } from "minecraft-status";
@@ -9,9 +12,9 @@ import fs from 'fs';
 
 // Interfaces matching the protobuffs
 interface ServerInfo {
-    host: string,
-    port: number,
-    query_port: number
+    host?: string,
+    port?: number,
+    query_port?: number
 }
 
 interface Player {
@@ -36,10 +39,16 @@ async function getMCStatus(address: string, port?: number, query?: number): Prom
         dnsPromises.resolveSrv("_minecraft._tcp." + address, (error, addresses) => {
             try {
                 // Return SRV port
-                if (error) console.log(error);
-                resolve(addresses[0].port);
+                const srvPort = addresses ? addresses[0].port : undefined;
+                if (srvPort) {
+                    resolve(srvPort);
+                    return;
+                } else {
+                    resolve(25565);
+                }
             } catch (err) {
                 // Fallback to default port
+                if (error) console.log(error);
                 console.log(err);
                 resolve(25565);
             }
@@ -117,6 +126,43 @@ async function getMCStatus(address: string, port?: number, query?: number): Prom
     }
 }
 
+
+// gRPC options
+const options = {
+    keepCase: true,
+    longs: String,
+    enums: String,
+    defaults: true,
+    oneofs: true
+}
+
+// gRPC setup
+const packageDefinition: PackageDefinition = loadSync(PROTO_PATH, options);
+const commandProto: GrpcObject = loadPackageDefinition(packageDefinition);
+const server: Server = new Server();
+
+// gRPC service
+server.addService((<any>commandProto.Status).service, {
+    GetMCStatus: async (input: { request: ServerInfo; }, callback) => {
+        const serverInfo: ServerInfo = input.request;
+        const response = await getMCStatus(serverInfo?.host, serverInfo?.port, serverInfo?.query_port);
+        callback(null, response);
+    },
+});
+
+// Start gRPC server
+const GRPC_PORT: number = <number><unknown>process.env.GRPC_PORT || 50051
+server.bindAsync(
+    `0.0.0.0:${GRPC_PORT}`,
+    ServerCredentials.createInsecure(),
+    (error, port) => {
+      console.log(`Game Server Status gRPC server running on port ${GRPC_PORT}`);
+      server.start();
+    }
+);
+
+
+// Configure/start REST API/Webserver
 const REST_PORT: number = <number><unknown>process.env.REST_PORT || 3000
 const app = express();
 app.use(bodyParser.json());
@@ -126,8 +172,10 @@ app.listen(REST_PORT, () => {
     console.log(`MC Status REST API running on port ${REST_PORT}`);
 });
 
+// Default route
 app.get("/", async (req, res) => {
     try {
+        // Default HTML response
         res.type("text/html")
             .status(200)
             .send(`
@@ -138,9 +186,12 @@ app.get("/", async (req, res) => {
                 <p>https://api.neuralnexus.dev/api/mcstatus/icon/your.server.ip</p>
                 <p>https://api.neuralnexus.dev/api/mcstatus/icon/your.server.ip?port=25566</p>
             `);
+
+    // Serverside error response
     } catch (err) {
-        res.status(500);
         console.error(err);
+        res.status(500)
+        .json({ "message": "Internal Server Error", "error": err });
     }
 });
 
@@ -196,36 +247,48 @@ app.get("/:address", async (req, res) => {
                 .send(`
                 <title>${port ? `${address}:${port}` : address}</title>
                 ${motdhtml}
-                <br>
-                <img src="${favicon}" alt="icon" />
+                <img src="https://api.neuralnexus.dev/api/mcstatus/icon/${addressStr}" alt="icon" />
                 <p>Players: ${players}</p>
                 <p>Version: ${version}</p>
             `);
+
+        // JSON response
         } else {
             res.type("application/json")
                 .json(serverResponse);
         }
+
+    // Serverside error response
     } catch (err) {
-        res.status(500);
         console.error(err);
+        res.status(500)
+        .json({ "message": "Internal Server Error", "error": err });
     }
 });
 
+// Icon endpoint
 app.get("/icon/:address", async (req, res) => {
     try {
+        // Server status response
         const serverResponse = await getMCStatus(req.params.address, <number><unknown>req.query.port, <number><unknown>req.query.query);
 
+        // Send favicon
         if (serverResponse?.favicon!==undefined && serverResponse.favicon!=="") {
             res.type("image/png")
             .status(200)
             .send(Buffer.from(serverResponse.favicon.replace("data:image/png;base64,", ""), 'base64'));
+
+        // Send default icon
         } else {
             res.type("image/png")
             .status(400)
             .send(Buffer.from(fs.readFileSync("./default.png")));
         }
+
+    // Serverside error response
     } catch (err) {
         console.error(err);
-        res.status(500).json({error: err});
+        res.status(500)
+        .json({ "message": "Internal Server Error", "error": err });
     }
 });

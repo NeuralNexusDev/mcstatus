@@ -1,4 +1,4 @@
-var PROTO_PATH = './server_status.proto';
+var PROTO_PATH = './mcstatus.proto';
 import { credentials, loadPackageDefinition } from '@grpc/grpc-js';
 import { loadSync } from '@grpc/proto-loader';
 
@@ -16,12 +16,12 @@ const Status = commandProto.Status;
 
 export async function Client(message) {
     const client = new Status(
-    "0.0.0.0:50052",
+    "0.0.0.0:50053",
     credentials.createInsecure()
     );
 
-    client.GetStatus(message, (error, response) => {
+    client.GetMCStatus(message, (error, response) => {
         if (error) throw error
-        console.log(response);
+        return response;
     });
 }
