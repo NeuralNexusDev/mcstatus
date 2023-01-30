@@ -100,7 +100,7 @@ async function getMCStatus(address: string, port?: number, query?: number): Prom
             
         } else {
             // Playercount mismatch between sample and online
-            if (serverStatus.players.sample.length !== serverStatus.players.online) {
+            if (!serverStatus.players.sample || serverStatus.players.sample.length !== serverStatus.players.online) {
                 statusResponse.players = [];
                 for (let i = 0; i < serverStatus.players.online; i++) {
                     statusResponse.players.push({ name: "" });
