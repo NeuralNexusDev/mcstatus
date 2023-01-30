@@ -248,6 +248,7 @@ app.get("/:address", async (req, res) => {
                 .send(`
                 <title>${port ? `${address}:${port}` : address}</title>
                 ${motdhtml}
+                <br>
                 <img src="https://api.neuralnexus.dev/api/mcstatus/icon/${addressStr}" alt="icon" />
                 <p>Players: ${players}</p>
                 <p>Version: ${version}</p>
