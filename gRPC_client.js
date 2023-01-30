@@ -20,8 +20,9 @@ export async function Client(message) {
     credentials.createInsecure()
     );
 
-    client.GetMCStatus(message, (error, response) => {
-        if (error) throw error
-        return response;
-    });
+    return new Promise((resolve, reject) => {
+        client.GetMCStatus(message, (error, response) => {
+        if (error) reject(error);
+        resolve(response);
+    })});
 }

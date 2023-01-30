@@ -195,6 +195,7 @@ app.get("/", async (req, res) => {
     }
 });
 
+// Server status route
 app.get("/:address", async (req, res) => {
     try {
         // Get address and port from request
