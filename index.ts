@@ -193,6 +193,7 @@ app.get("/", async (req, res) => {
                 <h1>How To:</h1>
                 <p>https://api.neuralnexus.dev/api/mcstatus/your.server.ip</p>
                 <p>https://api.neuralnexus.dev/api/mcstatus/your.server.ip?port=25566</p>
+                <p>https://api.neuralnexus.dev/api/mcstatus/your.server.ip?port=25566&query=25666</p>
                 <p>https://api.neuralnexus.dev/api/mcstatus/icon/your.server.ip</p>
                 <p>https://api.neuralnexus.dev/api/mcstatus/icon/your.server.ip?port=25566</p>
             `);
