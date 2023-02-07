@@ -111,6 +111,8 @@ async function getMCStatus(address: string, port?: number, query?: number): Prom
                 for (const element of serverStatus.description.extra) {
                     statusResponse.name += element.text;
                 }
+            } else if (serverStatus.description.hasOwnProperty("text")) {
+                statusResponse.name = motdParser.cleanTags(serverStatus.description.text);
             } else {
                 statusResponse.name = motdParser.cleanTags(serverStatus.description);
             }
