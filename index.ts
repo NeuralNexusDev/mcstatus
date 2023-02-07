@@ -173,7 +173,7 @@ server.bindAsync(
 
 
 // Configure/start REST API/Webserver
-const REST_PORT: number = <number><unknown>process.env.REST_PORT || 3000
+const REST_PORT: number = <number><unknown>process.env.REST_PORT || 3001
 const app = express();
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));

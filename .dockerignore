@@ -6,3 +6,4 @@ Dockerfile
 docker-compose.yml
 .github
 docker-compose.yml.example
+gRPC_client.js
