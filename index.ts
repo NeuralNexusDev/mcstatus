@@ -243,11 +243,7 @@ app.get("/:address", async (req, res) => {
             res.type("text/html").send(`
                 <meta content="IP: ${address}" property="og:title" />
                 <meta content="Powered by NeuralNexus.dev" property="og:site_name">
-                <meta property="og:description" content="
-                ${motdtext}
-                Players: ${players}
-                Version: ${version}
-                "/>
+                <meta property="og:description" content="${motdtext}\nPlayers: ${players}\nVersion: ${version}"/>
                 <meta content="https://api.neuralnexus.dev/api/mcstatus/${addressStr}" property="og:url" />
                 <meta content="https://api.neuralnexus.dev/api/mcstatus/icon/${addressStr}" property="og:image" />
                 <meta content="#7C0014" data-react-helmet="true" name="theme-color" />
