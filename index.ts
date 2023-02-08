@@ -70,7 +70,7 @@ async function getMCStatus(address: string, port?: number, query?: number): Prom
             name: "",
             nameHTML: motdParser.JSONToHtml(serverStatus.description),
             map: serverStatus.version.name,
-            maxplayers: serverStatus.players.max,
+            maxplayers: serverStatus.players?.max || 0,
             onlineplayers: serverStatus.players.online,
             players: serverStatus.players.sample,
             connect: `${address}:${srvPort}`,
