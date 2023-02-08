@@ -251,12 +251,13 @@ app.get("/:address", async (req, res) => {
 
         // HTML response
         } else if (req.get("accept")?.includes("text/html")) {
+            const serverIcon: string = favicon ? `<img src="${favicon}" alt="Server Icon" />` : `<img src="https://api.neuralnexus.dev/api/mcstatus/icon/${addressStr}" alt="Server Icon" />`;
             res.type("text/html")
                 .send(`
                 <title>${port ? `${address}:${port}` : address}</title>
                 ${motdhtml}
                 <br>
-                <img src="https://api.neuralnexus.dev/api/mcstatus/icon/${addressStr}" alt="icon" />
+                ${serverIcon}
                 <p>Players: ${players}</p>
                 <p>Version: ${version}</p>
             `);
