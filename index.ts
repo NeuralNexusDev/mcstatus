@@ -3,7 +3,7 @@ import { GrpcObject, loadPackageDefinition, Server, ServerCredentials } from '@g
 import { loadSync, PackageDefinition } from '@grpc/proto-loader';
 import express from "express";
 import bodyParser from "body-parser";
-import { MinecraftServerListPing, MinecraftQuery } from "minecraft-status";
+import { MinecraftServerListPing } from "minecraft-status";
 import Query from "minecraft-query";
 import motdParser from '@sfirew/mc-motd-parser'
 import dnsPromises from 'dns';
@@ -173,7 +173,7 @@ server.bindAsync(
 
 
 // Configure/start REST API/Webserver
-const REST_PORT: number = <number><unknown>process.env.REST_PORT || 3001
+const REST_PORT: number = <number><unknown>process.env.REST_PORT || 3001;
 const app = express();
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
