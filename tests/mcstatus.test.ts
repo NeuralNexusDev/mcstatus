@@ -41,7 +41,6 @@ describe("getMCStatus Online Response", () => {
             port: 25565
         }
         const status: StatusResponse = await getMCStatus(serverInfo)
-        console.log(status)
         expect(status).toMatchObject({
             name: expect.not.stringContaining("Server Offline"),
             nameHTML: expect.not.stringContaining("Server Offline"),
@@ -63,7 +62,6 @@ describe("getMCStatus Offline Response", () => {
             port: 25565
         }
         const status: StatusResponse = await getMCStatus(serverInfo)
-        console.log(status)
         expect(status).toMatchObject({
             name: "Server Offline",
             nameHTML: "<p>Server Offline</p>",
