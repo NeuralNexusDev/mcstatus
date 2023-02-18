@@ -3,8 +3,10 @@
         "module": "NodeNext",
         "moduleResolution": "NodeNext",
         "target": "ES2020",
+        "types": ["node", "jest"],
         "sourceMap": true,
-        "outDir": "dist"
+        "outDir": "dist",
+        "esModuleInterop": true
     },
     "include": ["./**/*"],
     "ts-node": {"esm": true}

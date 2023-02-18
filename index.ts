@@ -42,12 +42,13 @@ async function getMCStatus(address: string, port?: number, query?: number): Prom
                 const srvPort = addresses ? addresses[0].port : undefined;
                 if (srvPort) {
                     resolve(srvPort);
-                    return;
+
+                // Fallback to default port if no SRV record
                 } else {
                     resolve(25565);
                 }
             } catch (err) {
-                // Fallback to default port
+                // Fallback to default port if error
                 if (error) console.log(error);
                 console.log(err);
                 resolve(25565);
@@ -166,8 +167,8 @@ server.bindAsync(
     `0.0.0.0:${GRPC_PORT}`,
     ServerCredentials.createInsecure(),
     (error, port) => {
-      console.log(`Game Server Status gRPC server running on port ${GRPC_PORT}`);
-      server.start();
+        console.log(`Game Server Status gRPC server running on port ${GRPC_PORT}`);
+        server.start();
     }
 );
 
