@@ -1,35 +1,36 @@
 import {expect, jest, test} from '@jest/globals';
 
-import type * as MCStatus from "../src/mcstatus.js"
-import type { ServerInfo } from "../src/mcstatus.js"
-import type { StatusResponse } from "../src/mcstatus.js"
-const { getSRVPort } = jest.requireActual<typeof MCStatus>("../src/mcstatus")
-const { getMCStatus } = jest.requireActual<typeof MCStatus>("../src/mcstatus")
+import type * as MCStatus from "../lib/mcstatus.js"
+import type { ServerInfo } from "../lib/mcstatus.js"
+import type { StatusResponse } from "../lib/mcstatus.js"
+const { getSRVPort } = jest.requireActual<typeof MCStatus>("../lib/mcstatus")
+const { getMCStatus } = jest.requireActual<typeof MCStatus>("../lib/mcstatus")
 
+jest.setTimeout(10000);
 
 // Test getSRVPort
 describe("getSRVPort Default Port", () => {
     it("should return port number 25565", async () => {
-        const host: string = "mc.basmc.ca"
-        const port: number = await getSRVPort(host)
-        expect(port).toBe(25565)
-    })
+        const host: string = "mc.basmc.ca";
+        const port: number = await getSRVPort(host);
+        expect(port).toBe(25565);
+    });
 });
 
 describe("getSRVPort Non-Default Port", () => {
     it("should return port number 25666", async () => {
-        const host: string = "sb3.thexpnetwork.com"
-        const port: number = await getSRVPort(host)
-        expect(port).toBe(25666)
-    })
+        const host: string = "sb3.thexpnetwork.com";
+        const port: number = await getSRVPort(host);
+        expect(port).toBe(25666);
+    });
 });
 
 describe("getSRVPort Errored", () => {
     it("should return port number 25565", async () => {
-        const host: string = "example.com"
-        const port: number = await getSRVPort(host)
-        expect(port).not.toBe(25566)
-    })
+        const host: string = "example.com";
+        const port: number = await getSRVPort(host);
+        expect(port).not.toBe(25566);
+    });
 });
 
 
@@ -39,8 +40,8 @@ describe("getMCStatus Online Response", () => {
         const serverInfo: ServerInfo = {
             host: "mc.basmc.ca",
             port: 25565
-        }
-        const status: StatusResponse = await getMCStatus(serverInfo)
+        };
+        const status: StatusResponse = await getMCStatus(serverInfo);
         expect(status).toMatchObject({
             name: expect.not.stringContaining("Server Offline"),
             nameHTML: expect.not.stringContaining("Server Offline"),
@@ -51,8 +52,8 @@ describe("getMCStatus Online Response", () => {
             connect: expect.any(String),
             version: expect.any(String),
             favicon: expect.any(String)
-        })
-    })
+        });
+    });
 });
 
 describe("getMCStatus Offline Response", () => {
@@ -60,8 +61,8 @@ describe("getMCStatus Offline Response", () => {
         const serverInfo: ServerInfo = {
             host: "example.com",
             port: 25565
-        }
-        const status: StatusResponse = await getMCStatus(serverInfo)
+        };
+        const status: StatusResponse = await getMCStatus(serverInfo);
         expect(status).toMatchObject({
             name: "Server Offline",
             nameHTML: "<p>Server Offline</p>",
@@ -72,8 +73,8 @@ describe("getMCStatus Offline Response", () => {
             connect: expect.any(String),
             version: "Minecraft",
             favicon: ""
-        })
-    })
+        });
+    });
 });
 
-export {}
+export {};

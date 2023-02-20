@@ -58,7 +58,7 @@ export async function getMCStatus(serverInfo: ServerInfo): Promise<StatusRespons
     const srvPort: number = port || await getSRVPort(host);
 
     // Server status lookup
-    let serverStatus;
+    let serverStatus: any;
     try {
         serverStatus = await MinecraftServerListPing.ping(4, host, srvPort);
     } catch (error) {

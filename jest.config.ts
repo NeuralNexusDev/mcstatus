@@ -6,5 +6,6 @@ const config: Config.InitialOptions = {
     verbose: true,
     automock: false,
     moduleDirectories: ["node_modules", "src"],
+    moduleFileExtensions: ["ts", "js"],
 }
 export default config
