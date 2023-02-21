@@ -3,6 +3,8 @@ import Query from "minecraft-query";
 import motdParser from '@sfirew/mc-motd-parser'
 import dnsPromises from 'dns';
 
+
+// Interfaces matching the protobuffs
 export interface ServerInfo {
     host?: string,
     port?: number,
