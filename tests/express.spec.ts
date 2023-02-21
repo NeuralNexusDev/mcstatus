@@ -1,28 +1,8 @@
-import {expect, jest, test} from '@jest/globals';
-import request from 'supertest';
-
-import express, { Request, Response, Router } from 'express';
-import bodyParser from 'body-parser';
-
-import type * as Express from "../lib/express";
-const { defaultRoute } = jest.requireActual<typeof Express>("../lib/express");
-const { serverStatusRoute } = jest.requireActual<typeof Express>("../lib/express");
-const { serverIconRoute } = jest.requireActual<typeof Express>("../lib/express");
-const { app } = jest.requireActual<typeof Express>("../lib/express");
-
-// describe("defaultRoute", () => {
-//     it("responds to /", async () => {
-//         const res = await request(app).get('/');
-//         expect(res.header['content-type']).toBe('text/html; charset=utf-8');
-//         // expect(res.status).toBe(200);
-//         expect(res.text).toContain("https://api.neuralnexus.dev/api/mcstatus/your.server.ip");
-//     });
-// });
+import { defaultRoute, serverStatusRoute, serverIconRoute } from "../lib/express.js";
 
 
 describe("defaultRoute function", () => {
     it("responds to /", async () => {
-        const err = () => { return; }
         const req = {
             accept: {
                 types: () => { return "text/html"; }
@@ -36,7 +16,7 @@ describe("defaultRoute function", () => {
         };
         const next = () => { return; };
 
-        await defaultRoute(err, req, res, next);
+        await defaultRoute(req, res, next);
 
         expect(res.type).toBe("text/html");
         expect(res.status).toBe(200);
@@ -45,7 +25,6 @@ describe("defaultRoute function", () => {
 });
 
 describe("serverStatusRoute", () => {
-    const err = () => { return; }
     const req = { params: { address: "mc.basmc.ca" }, query: {}, get: {} };
     const res = { text: {}, type: {}, status: {}, send: {}, json: {} };
     const next = () => { return; };
@@ -59,7 +38,7 @@ describe("serverStatusRoute", () => {
         res.send = (body) => { res.text = body; return res; };
         res.json = (body) => { res.text = JSON.stringify(body); return res; };
 
-        await serverStatusRoute(err, req, res, next);
+        await serverStatusRoute(req, res, next);
 
         expect(res.type).toBe("text/html");
         expect(res.status).toBe(200);
@@ -75,7 +54,7 @@ describe("serverStatusRoute", () => {
         res.send = (body) => { res.text = body; return res; };
         res.json = (body) => { res.text = JSON.stringify(body); return res; };
 
-        await serverStatusRoute(err, req, res, next);
+        await serverStatusRoute(req, res, next);
 
         expect(res.type).toBe("text/html");
         expect(res.status).toBe(200);
@@ -90,7 +69,7 @@ describe("serverStatusRoute", () => {
         res.status = (status) => { res.status = status; return res; };
         res.json = (body) => { res.text = JSON.stringify(body); return res; };
 
-        await serverStatusRoute(err, req, res, next);
+        await serverStatusRoute(req, res, next);
         expect(res.type).toBe("application/json");
         expect(res.status).toBe(200);
     });
@@ -103,7 +82,7 @@ describe("serverStatusRoute", () => {
         res.status = (status) => { res.status = status; return res; };
         res.json = (body) => { res.text = JSON.stringify(body); return res; };
 
-        await serverStatusRoute(err, req, res, next);
+        await serverStatusRoute(req, res, next);
         expect(res.type).toBe("application/json");
         expect(res.status).toBe(400);
         expect(res.text).toContain("Unsupported Accept Headers");
@@ -111,7 +90,6 @@ describe("serverStatusRoute", () => {
 });
 
 describe("serverIconRoute", () => {
-    const err = () => { return; }
     const req = { params: { address: "mc.basmc.ca" }, query: {}, get: {} };
     const res = { text: {}, type: {}, status: {}, send: {}, json: {} };
     const next = () => { return; };
@@ -124,16 +102,9 @@ describe("serverIconRoute", () => {
         res.send = (body) => { res.text = body; return res; };
         res.json = (body) => { res.text = JSON.stringify(body); return res; };
 
-        await serverIconRoute(err, req, res, next);
+        await serverIconRoute(req, res, next);
         expect(res.type).toBe("image/png");
         expect(res.status).toBe(200);
         expect(res.text).toBeInstanceOf(Buffer);
     });
 });
-
-
-
-
-
-
-export {};

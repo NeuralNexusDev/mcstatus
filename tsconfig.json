@@ -1,13 +1,14 @@
 {
     "compilerOptions": {
-        "module": "CommonJS",
-        "moduleResolution": "node",
+        "module": "NodeNext",
+        "moduleResolution": "NodeNext",
         "target": "ES2020",
         "types": ["node", "jest"],
         "sourceMap": true,
         "outDir": "dist",
-        "esModuleInterop": true
+        "esModuleInterop": true,
+        "allowJs": true
     },
     "include": ["./**/*"],
-    "ts-node": {"esm": true}
+    "ts-node": { "esm": true }
 }

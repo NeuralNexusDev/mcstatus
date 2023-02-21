@@ -3,11 +3,11 @@ import bodyParser from "body-parser";
 import motdParser from '@sfirew/mc-motd-parser'
 import fs from 'fs';
 
-import { getMCStatus, ServerInfo } from "./mcstatus";
+import { getMCStatus, ServerInfo } from "./mcstatus.js";
 
 
 // Default route function
-export async function defaultRoute(err, req, res, next) {
+export async function defaultRoute(req, res, next) {
     res.type("text/html")
         .status(200)
         .send(`
@@ -22,7 +22,7 @@ export async function defaultRoute(err, req, res, next) {
 }
 
 // Server status route function
-export async function serverStatusRoute(err, req, res, next) {
+export async function serverStatusRoute(req, res, next) {
     try {
         // Get address and port from request
         const address = req.params.address;
@@ -100,7 +100,7 @@ export async function serverStatusRoute(err, req, res, next) {
         } else {
             res.type("application/json")
                 .status(400)
-                .json({ "message": "Unsupported Accept Headers", "error": err });
+                .json({ "message": "Unsupported Accept Headers", "error": {} });
         }
 
     // Serverside error response
@@ -113,7 +113,7 @@ export async function serverStatusRoute(err, req, res, next) {
 }
 
 // Server icon route function
-export async function serverIconRoute(err, req, res, next) {
+export async function serverIconRoute(req, res, next) {
     try {
         // Get address and port from request
         const serverInfo: ServerInfo = {
@@ -137,7 +137,7 @@ export async function serverIconRoute(err, req, res, next) {
         } else {
             res.type("application/json")
                 .status(404)
-                .json({ "message": "Server favicon not found", "error": err });
+                .json({ "message": "Server favicon not found", "error": {} });
         }
 
     // Serverside error response
@@ -148,7 +148,6 @@ export async function serverIconRoute(err, req, res, next) {
             .json({ "message": "Internal Server Error", "error": err });
     }
 }
-
 
 // Configure/start REST API/Webserver
 export const app = express();

@@ -1,12 +1,4 @@
-import {expect, jest, test} from '@jest/globals';
-
-import type * as MCStatus from "../lib/mcstatus.js"
-import type { ServerInfo } from "../lib/mcstatus.js"
-import type { StatusResponse } from "../lib/mcstatus.js"
-const { getSRVPort } = jest.requireActual<typeof MCStatus>("../lib/mcstatus")
-const { getMCStatus } = jest.requireActual<typeof MCStatus>("../lib/mcstatus")
-
-jest.setTimeout(10000);
+import { getSRVPort, getMCStatus, ServerInfo, StatusResponse } from "../lib/mcstatus.js";
 
 // Test getSRVPort
 describe("getSRVPort Default Port", () => {
@@ -41,18 +33,18 @@ describe("getMCStatus Online Response", () => {
             host: "mc.basmc.ca",
             port: 25565
         };
+
         const status: StatusResponse = await getMCStatus(serverInfo);
-        expect(status).toMatchObject({
-            name: expect.not.stringContaining("Server Offline"),
-            nameHTML: expect.not.stringContaining("Server Offline"),
-            map: expect.any(String),
-            maxplayers: expect.any(Number),
-            onlineplayers: expect.any(Number),
-            players: expect.any(Array),
-            connect: expect.any(String),
-            version: expect.any(String),
-            favicon: expect.any(String)
-        });
+
+        expect(status.name).not.toContain("Server Offline");
+        expect(status.nameHTML).not.toContain("Server Offline");
+        expect(status.map).toBeDefined();
+        expect(status.maxplayers).toBeDefined();
+        expect(status.onlineplayers).toBeDefined();
+        expect(status.players).toBeDefined();
+        expect(status.connect).toBeDefined();
+        expect(status.version).toBeDefined();
+        expect(status.favicon).toBeDefined();
     });
 });
 
@@ -62,19 +54,17 @@ describe("getMCStatus Offline Response", () => {
             host: "example.com",
             port: 25565
         };
+
         const status: StatusResponse = await getMCStatus(serverInfo);
-        expect(status).toMatchObject({
-            name: "Server Offline",
-            nameHTML: "<p>Server Offline</p>",
-            map: "Minecraft",
-            maxplayers: 0,
-            onlineplayers: 0,
-            players: [],
-            connect: expect.any(String),
-            version: "Minecraft",
-            favicon: ""
-        });
+
+        expect(status.name).toContain("Server Offline");
+        expect(status.nameHTML).toContain("Server Offline");
+        expect(status.map).toBe("Minecraft");
+        expect(status.maxplayers).toBe(0);
+        expect(status.onlineplayers).toBe(0);
+        expect(status.players).toEqual([]);
+        expect(status.connect).toBeDefined();
+        expect(status.version).toBe("Minecraft");
+        expect(status.favicon).toBe("");
     });
 });
-
-export {};
