@@ -5,9 +5,7 @@
         "target": "ES2020",
         "types": ["node", "jest"],
         "sourceMap": true,
-        "outDir": "dist",
-        "esModuleInterop": true,
-        "allowJs": true
+        "outDir": "dist"
     },
     "include": ["./**/*"],
     "ts-node": { "esm": true }
