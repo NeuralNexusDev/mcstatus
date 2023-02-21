@@ -8,6 +8,6 @@ RUN npm install
 
 COPY ./* ./
 
-RUN /app/node_modules/typescript/bin/tsc
+RUN npm run build
 
 CMD ["node", "./dist/index.js"]
