@@ -11,7 +11,7 @@ app.listen(REST_PORT, () => {
 });
 
 // Start gRPC server
-const GRPC_PORT: number = <number><unknown>process.env.GRPC_PORT || 50051
+const GRPC_PORT: number = <number><unknown>process.env.GRPC_PORT || 50051;
 server.bindAsync(
     `0.0.0.0:${GRPC_PORT}`,
     ServerCredentials.createInsecure(),

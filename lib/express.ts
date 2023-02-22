@@ -8,9 +8,10 @@ import { getMCStatus, ServerInfo } from "./mcstatus.js";
 
 // Default route function
 export async function defaultRoute(req, res, next) {
-    res.type("text/html")
-        .status(200)
-        .send(`
+    try {
+        res.type("text/html")
+            .status(200)
+            .send(`
             <title>NeuralNexus.dev</title>
             <h1>How To:</h1>
             <p>https://api.neuralnexus.dev/api/mcstatus/your.server.ip</p>
@@ -19,6 +20,13 @@ export async function defaultRoute(req, res, next) {
             <p>https://api.neuralnexus.dev/api/mcstatus/icon/your.server.ip</p>
             <p>https://api.neuralnexus.dev/api/mcstatus/icon/your.server.ip?port=25566</p>
         `);
+    // Serverside error response
+    } catch (err) {
+        console.log(err);
+        res.type("application/json")
+            .status(500)
+            .json({ "message": "Internal Server Error", "error": err });
+    }
 }
 
 // Server status route function
