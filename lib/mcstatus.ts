@@ -76,7 +76,7 @@ export async function getMCStatus(serverInfo: ServerInfo): Promise<StatusRespons
             map: serverStatus.version.name,
             maxplayers: serverStatus.players?.max || 0,
             onlineplayers: serverStatus.players.online,
-            players: serverStatus.players.sample,
+            players: serverStatus.players.online === 0 ? [] : serverStatus.players.sample,
             connect: `${host}:${srvPort}`,
             version: serverStatus.version.name,
             favicon: serverStatus.favicon
