@@ -100,7 +100,10 @@ export async function getMCStatus(serverInfo: ServerInfo): Promise<StatusRespons
         // Add query data to status response
         if (serverQuery) {
             statusResponse.name = serverQuery.motd.replaceAll("�", "§");
-            statusResponse.players = serverQuery.players;
+            statusResponse.players = [];
+            for (let i = 0; i < serverQuery.players.length; i++) {
+                statusResponse.players.push({ name: serverQuery.players[i] });
+            }
             
         } else {
             // Playercount mismatch between sample and online
@@ -121,6 +124,8 @@ export async function getMCStatus(serverInfo: ServerInfo): Promise<StatusRespons
                 statusResponse.name = motdParser.cleanTags(serverStatus.description);
             }
         }
+
+        console.log(statusResponse.players)
 
         return statusResponse;
 

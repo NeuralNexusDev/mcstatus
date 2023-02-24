@@ -2,4 +2,3 @@ node_modules
 .env
 docker-compose.yml
 dist
-test.ts
