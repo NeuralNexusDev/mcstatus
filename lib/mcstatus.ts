@@ -124,9 +124,6 @@ export async function getMCStatus(serverInfo: ServerInfo): Promise<StatusRespons
                 statusResponse.name = motdParser.cleanTags(serverStatus.description);
             }
         }
-
-        console.log(statusResponse.players)
-
         return statusResponse;
 
     // Server offline response

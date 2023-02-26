@@ -141,7 +141,7 @@ export async function serverIconRoute(req, res, next) {
         if (serverResponse?.favicon!==undefined && serverResponse.favicon!=="") {
             res.type("image/png")
                 .status(200)
-                .send(Buffer.from(serverResponse.favicon, "base64"));
+                .send(Buffer.from(serverResponse.favicon.replace(/^data:image\/png;base64,/, ""), "base64"));
         } else {
             res.type("application/json")
                 .status(404)
