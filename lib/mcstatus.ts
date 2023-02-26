@@ -2,6 +2,7 @@ import { MinecraftServerListPing } from "minecraft-status";
 import Query from "minecraft-query";
 import motdParser from '@sfirew/mc-motd-parser'
 import dnsPromises from 'dns';
+import { ping } from 'bedrock-protocol';
 
 
 // Interfaces matching the protobuffs
@@ -27,6 +28,7 @@ export interface StatusResponse {
     favicon?: string
 }
 
+// Get SRV port from host
 export async function getSRVPort(host: string): Promise<number> {
     return new Promise((resolve) => {
         dnsPromises.resolveSrv("_minecraft._tcp." + host, (error, addresses) => {
@@ -51,7 +53,8 @@ export async function getSRVPort(host: string): Promise<number> {
     });
 }
 
-export async function getMCStatus(serverInfo: ServerInfo): Promise<StatusResponse> {
+// Get Java server status
+async function getJavaStatus(serverInfo: ServerInfo): Promise<StatusResponse> {
     const host = serverInfo.host;
     const port = serverInfo.port;
     const query = serverInfo.query_port;
@@ -104,7 +107,7 @@ export async function getMCStatus(serverInfo: ServerInfo): Promise<StatusRespons
             for (let i = 0; i < serverQuery.players.length; i++) {
                 statusResponse.players.push({ name: serverQuery.players[i] });
             }
-            
+
         } else {
             // Playercount mismatch between sample and online
             if (!serverStatus.players.sample || serverStatus.players.sample.length !== serverStatus.players.online) {
@@ -139,5 +142,75 @@ export async function getMCStatus(serverInfo: ServerInfo): Promise<StatusRespons
             version: "Minecraft",
             favicon: ""
         }
+    }
+}
+
+// Get Bedrock server status
+async function getBedrockStatus(serverInfo: ServerInfo): Promise<StatusResponse> {
+    const host: string = serverInfo.host;
+
+    if (!serverInfo.port) {
+        serverInfo.port = 19132;
+    }
+    const port: number = parseInt(<string><unknown>serverInfo.port, 10);
+
+    // Get Bedrock server status
+    let serverStatus: any;
+    try {
+        serverStatus = await ping({ host, port }).then(res => {
+            return res;
+        }).catch(err => {
+            console.log(err);
+            return undefined;
+        });
+    } catch (error) {
+        console.log(error);
+        serverStatus = undefined;
+    }
+
+    // Server online response
+    if (serverStatus) {
+        const statusResponse: StatusResponse = {
+            name: serverStatus.motd,
+            nameHTML: motdParser.autoToHtml(serverStatus.motd),
+            map: serverStatus.levelName,
+            maxplayers: serverStatus.playersMax,
+            onlineplayers: serverStatus.playersOnline,
+            players: serverStatus.playersOnline === 0 ? [] : serverStatus.players,
+            connect: `${host}:${port}`,
+            version: serverStatus.version,
+            favicon: ""
+        }
+
+        statusResponse.players = [];
+        for (let i = 0; i < serverStatus.playersOnline; i++) {
+            statusResponse.players.push({ name: "" });
+        }
+
+        return statusResponse;
+
+    // Server offline response
+    } else {
+        return {
+            name: "Server Offline",
+            nameHTML: "<p>Server Offline</p>",
+            map: "Minecraft",
+            maxplayers: 0,
+            onlineplayers: 0,
+            players: [],
+            connect: `${host}:${port}`,
+            version: "Minecraft",
+            favicon: ""
+        }
+    }
+}
+
+// Get server status
+export async function getMCStatus(serverInfo: ServerInfo): Promise<StatusResponse> {
+    const java = await getJavaStatus(serverInfo);
+    if (java.name === "Server Offline") {
+        return await getBedrockStatus(serverInfo);
+    } else {
+        return java;
     }
 }
