@@ -6,6 +6,7 @@ export interface ServerInfo {
     host?: string,
     port?: number,
     query_port?: number
+    is_bedrock?: boolean
 }
 
 interface Player {
@@ -21,7 +22,8 @@ export interface StatusResponse {
     players?: Player[],
     connect?: string,
     version?: string,
-    favicon?: string
+    favicon?: string,
+    server_type?: string
 }
 
 

@@ -17,8 +17,10 @@ export async function defaultRoute(req, res, next) {
             <p>https://api.neuralnexus.dev/api/mcstatus/your.server.ip</p>
             <p>https://api.neuralnexus.dev/api/mcstatus/your.server.ip?port=25566</p>
             <p>https://api.neuralnexus.dev/api/mcstatus/your.server.ip?port=25566&query=25666</p>
+            <p>https://api.neuralnexus.dev/api/mcstatus/your.server.ip?port=25566&query=25666&is_bedrock=true</p>
             <p>https://api.neuralnexus.dev/api/mcstatus/icon/your.server.ip</p>
             <p>https://api.neuralnexus.dev/api/mcstatus/icon/your.server.ip?port=25566</p>
+            <p>https://api.neuralnexus.dev/api/mcstatus/icon/your.server.ip?port=25566&is_bedrock=true</p>
         `);
     // Serverside error response
     } catch (err) {
@@ -36,16 +38,27 @@ export async function serverStatusRoute(req, res, next) {
         const address = req.params.address;
         const port: number = <number><unknown>req.query.port;
         const queryPort: number = <number><unknown>req.query.query;
+        const isBedrock: boolean = req.query.is_bedrock;
 
         // Build response address string
         let addressStr = port ? `${address}?port=${port}` : address;
-        addressStr = queryPort ? `${addressStr}?query=${queryPort}` : addressStr;
+        if (queryPort) {
+            addressStr = port ? `${addressStr}&query=${queryPort}` : `${addressStr}?query=${queryPort}`;
+            if (isBedrock) {
+                addressStr = `${addressStr}&is_bedrock=${isBedrock}`;
+            }
+        } else if (isBedrock) {
+            addressStr = port ? `${addressStr}&is_bedrock=${isBedrock}` : `${addressStr}?is_bedrock=${isBedrock}`;
+            if (queryPort) {
+                addressStr = `${addressStr}&query=${queryPort}`;
+            }
+        }
 
         // Ignore favicon requests
         if (address==="favicon.ico" || address==="undefined" || address===undefined) return
 
         // Get server status
-        const serverResponse = await getMCStatus({ host: address, port: port, query_port: queryPort });
+        const serverResponse = await getMCStatus({ host: address, port: port, query_port: queryPort, is_bedrock: isBedrock });
 
         // Initialize response variables
         let motdtext: string = motdParser.cleanTags(serverResponse.name);
@@ -127,7 +140,15 @@ export async function serverIconRoute(req, res, next) {
         const serverInfo: ServerInfo = {
             host: req.params.address,
             port: <number><unknown>req.query.port,
-            query_port: <number><unknown>req.query.query
+            query_port: <number><unknown>req.query.query,
+            is_bedrock: req.query.is_bedrock
+        }
+
+        if (serverInfo.is_bedrock) {
+            res.type("image/png")
+                .status(200)
+                .sendFile("bedrock.png", { root: "./" });
+            return
         }
 
         // Build response address string
@@ -143,9 +164,9 @@ export async function serverIconRoute(req, res, next) {
                 .status(200)
                 .send(Buffer.from(serverResponse.favicon.replace(/^data:image\/png;base64,/, ""), "base64"));
         } else {
-            res.type("application/json")
-                .status(404)
-                .json({ "message": "Server favicon not found", "error": {} });
+            res.type("image/png")
+                .status(200)
+                .sendFile("default.png", { root: "./" });
         }
 
     // Serverside error response

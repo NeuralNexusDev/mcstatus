@@ -10,6 +10,7 @@ export interface ServerInfo {
     host?: string,
     port?: number,
     query_port?: number
+    is_bedrock?: boolean
 }
 
 interface Player {
@@ -25,7 +26,8 @@ export interface StatusResponse {
     players?: Player[],
     connect?: string,
     version?: string,
-    favicon?: string
+    favicon?: string,
+    server_type?: string
 }
 
 // Get SRV port from host
@@ -82,7 +84,8 @@ async function getJavaStatus(serverInfo: ServerInfo): Promise<StatusResponse> {
             players: serverStatus.players.online === 0 ? [] : serverStatus.players.sample,
             connect: `${host}:${srvPort}`,
             version: serverStatus.version.name,
-            favicon: serverStatus.favicon
+            favicon: serverStatus.favicon,
+            server_type: "java"
         }
 
         // Default query port to SRV port if not specified
@@ -140,7 +143,8 @@ async function getJavaStatus(serverInfo: ServerInfo): Promise<StatusResponse> {
             players: [],
             connect: `${host}:${srvPort}`,
             version: "Minecraft",
-            favicon: ""
+            favicon: "",
+            server_type: "java"
         }
     }
 }
@@ -179,7 +183,8 @@ async function getBedrockStatus(serverInfo: ServerInfo): Promise<StatusResponse>
             players: serverStatus.playersOnline === 0 ? [] : serverStatus.players,
             connect: `${host}:${port}`,
             version: serverStatus.version,
-            favicon: ""
+            favicon: "",
+            server_type: "bedrock"
         }
 
         statusResponse.players = [];
@@ -200,17 +205,19 @@ async function getBedrockStatus(serverInfo: ServerInfo): Promise<StatusResponse>
             players: [],
             connect: `${host}:${port}`,
             version: "Minecraft",
-            favicon: ""
+            favicon: "",
+            server_type: "bedrock"
         }
     }
 }
 
 // Get server status
 export async function getMCStatus(serverInfo: ServerInfo): Promise<StatusResponse> {
-    const java = await getJavaStatus(serverInfo);
-    if (java.name === "Server Offline") {
-        return await getBedrockStatus(serverInfo);
-    } else {
-        return java;
+    if (!serverInfo.is_bedrock) {
+        const javaStatus: StatusResponse = await getJavaStatus(serverInfo);
+        if (javaStatus.name !== "Server Offline") {
+            return javaStatus;
+        }
     }
+    return await getBedrockStatus(serverInfo);
 }

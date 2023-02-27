@@ -1,6 +1,10 @@
-import { ping } from 'bedrock-protocol';
-ping({ host: 'mc.basmc.ca', port: 19132 }).then(res => {
-    console.log(res);
-}).catch(err => {
-    console.log(err);
-});
+import { gRPCGetMCStatus, ServerInfo } from "./GetMCStatusGRPCClient.js";
+
+const serverInfo: ServerInfo = {
+    host: "mc.basmc.ca",
+    port: 25565,
+    query_port: 25565,
+    is_bedrock: false,
+};
+
+console.log(await gRPCGetMCStatus(serverInfo));

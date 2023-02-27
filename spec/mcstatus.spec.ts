@@ -27,8 +27,8 @@ describe("getSRVPort Errored", () => {
 
 
 // Test getMCStatus
-describe("getMCStatus Online Response", () => {
-    it("should return a status response", async () => {
+describe("getMCStatus", () => {
+    it("should return an online java status response", async () => {
         const serverInfo: ServerInfo = {
             host: "mc.basmc.ca",
             port: 25565
@@ -45,11 +45,31 @@ describe("getMCStatus Online Response", () => {
         expect(status.connect).toBeDefined();
         expect(status.version).toBeDefined();
         expect(status.favicon).toBeDefined();
+        expect(status.server_type).toBe("java");
     });
-});
 
-describe("getMCStatus Offline Response", () => {
-    it("should return a status response", async () => {
+    it("should return an online bedrock status response", async () => {
+        const serverInfo: ServerInfo = {
+            host: "mc.basmc.ca",
+            port: 19132,
+            is_bedrock: true
+        };
+
+        const status: StatusResponse = await getMCStatus(serverInfo);
+
+        expect(status.name).not.toContain("Server Offline");
+        expect(status.nameHTML).not.toContain("Server Offline");
+        expect(status.map).toBeDefined();
+        expect(status.maxplayers).toBeDefined();
+        expect(status.onlineplayers).toBeDefined();
+        expect(status.players).toBeDefined();
+        expect(status.connect).toBeDefined();
+        expect(status.version).toBeDefined();
+        expect(status.favicon).toBeDefined();
+        expect(status.server_type).toBe("bedrock");
+    });
+
+    it("should return an offline status response", async () => {
         const serverInfo: ServerInfo = {
             host: "example.com",
             port: 25565
@@ -66,5 +86,6 @@ describe("getMCStatus Offline Response", () => {
         expect(status.connect).toBeDefined();
         expect(status.version).toBe("Minecraft");
         expect(status.favicon).toBe("");
+        expect(status.server_type).toBeDefined();
     });
 });

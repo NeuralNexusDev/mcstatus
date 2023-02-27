@@ -8,6 +8,7 @@ message ServerInfo {
     string host = 1;
     int32 port = 2;
     int32 query_port = 3;
+    bool is_bedrock = 4;
 }
 
 message Player{
@@ -21,4 +22,5 @@ message StatusResponse {
     repeated Player players = 4;
     string connect = 5;
     string favicon = 6;
+    string server_type = 7;
 }
