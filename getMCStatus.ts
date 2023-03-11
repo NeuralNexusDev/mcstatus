@@ -40,6 +40,7 @@ const Proto: GrpcObject = loadPackageDefinition(packageDefinition);
 const Status: any = Proto.Status;
 
 const MCSTATUS_GRPC_PORT: number = <number><unknown>process.env.MCSTATUS_GRPC_PORT || 50051;
+const MCSTATUS_REST_URL: string = process.env.MCSTATUS_REST_URL || "https://api.neuralnexus.dev/api/v1/mcstatus";
 
 // gRPC client
 const client = new Status(
@@ -76,7 +77,7 @@ export async function RESTGetMCStatus(serverInfo: ServerInfo): Promise<StatusRes
     }
 
     // Fetch response
-    const response = await fetch(`https://api.neuralnexus.dev/api/mcstatus/${addressStr}`, {
+    const response = await fetch(`${MCSTATUS_REST_URL}/${addressStr}`, {
         method: 'GET',
         headers: {
             'Accept': 'application/json'
