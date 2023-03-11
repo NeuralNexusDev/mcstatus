@@ -1,9 +1,12 @@
-import express, { Request, Response } from "express";
+import express, { Router } from "express";
 import bodyParser from "body-parser";
 import motdParser from '@sfirew/mc-motd-parser'
-import fs from 'fs';
 
 import { getMCStatus, ServerInfo } from "./mcstatus.js";
+
+
+const apiURL: string = process.env.API_URL || "https://api.neuralnexus.dev/api";
+const apiVersion: string = process.env.API_VERSION || "v1";
 
 
 // Default route function
@@ -14,13 +17,13 @@ export async function defaultRoute(req, res, next) {
             .send(`
             <title>NeuralNexus.dev</title>
             <h1>How To:</h1>
-            <p>https://api.neuralnexus.dev/api/mcstatus/your.server.ip</p>
-            <p>https://api.neuralnexus.dev/api/mcstatus/your.server.ip?port=25566</p>
-            <p>https://api.neuralnexus.dev/api/mcstatus/your.server.ip?port=25566&query=25666</p>
-            <p>https://api.neuralnexus.dev/api/mcstatus/your.server.ip?port=25566&query=25666&is_bedrock=true</p>
-            <p>https://api.neuralnexus.dev/api/mcstatus/icon/your.server.ip</p>
-            <p>https://api.neuralnexus.dev/api/mcstatus/icon/your.server.ip?port=25566</p>
-            <p>https://api.neuralnexus.dev/api/mcstatus/icon/your.server.ip?port=25566&is_bedrock=true</p>
+            <p>${apiURL}/${apiVersion}/mcstatus/your.server.ip</p>
+            <p>${apiURL}/${apiVersion}/mcstatus/your.server.ip?port=25566</p>
+            <p>${apiURL}/${apiVersion}/mcstatus/your.server.ip?port=25566&query=25666</p>
+            <p>${apiURL}/${apiVersion}/mcstatus/your.server.ip?port=25566&query=25666&is_bedrock=true</p>
+            <p>${apiURL}/${apiVersion}/mcstatus/icon/your.server.ip</p>
+            <p>${apiURL}/${apiVersion}/mcstatus/icon/your.server.ip?port=25566</p>
+            <p>${apiURL}/${apiVersion}/mcstatus/icon/your.server.ip?port=25566&is_bedrock=true</p>
         `);
     // Serverside error response
     } catch (err) {
@@ -80,8 +83,8 @@ export async function serverStatusRoute(req, res, next) {
                 <meta content="IP: ${address}" property="og:title" />
                 <meta content="Powered by NeuralNexus.dev" property="og:site_name">
                 <meta property="og:description" content="${motdtext}\nPlayers: ${players}\nVersion: ${version}"/>
-                <meta content="https://api.neuralnexus.dev/api/mcstatus/${addressStr}" property="og:url" />
-                <meta content="https://api.neuralnexus.dev/api/mcstatus/icon/${addressStr}" property="og:image" />
+                <meta content="${apiURL}/${apiVersion}/mcstatus/${addressStr}" property="og:url" />
+                <meta content="${apiURL}/${apiVersion}/mcstatus/icon/${addressStr}" property="og:image" />
                 <meta content="#7C0014" data-react-helmet="true" name="theme-color" />
             `);
 
@@ -94,7 +97,7 @@ export async function serverStatusRoute(req, res, next) {
                 res.status(400);
             }
 
-            const serverIcon: string = favicon ? `<img src="${favicon}" alt="Server Icon" />` : `<img src="https://api.neuralnexus.dev/api/mcstatus/icon/${addressStr}" alt="Server Icon" />`;
+            const serverIcon: string = favicon ? `<img src="${favicon}" alt="Server Icon" />` : `<img src="${apiURL}/${apiVersion}/mcstatus/icon/${addressStr}" alt="Server Icon" />`;
             res.type("text/html")
                 .send(`
                 <title>${port ? `${address}:${port}` : address}</title>
@@ -178,16 +181,18 @@ export async function serverIconRoute(req, res, next) {
     }
 }
 
-// Configure/start REST API/Webserver
+// Configure REST API/Webserver
 export const app = express();
+export const router = Router();
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+app.use("", router);
 
 // Default route
-app.get("/", defaultRoute);
+router.get("/", defaultRoute);
 
 // Server status route
-app.get("/:address", serverStatusRoute);
+router.get("/:address", serverStatusRoute);
 
 // Icon endpoint
-app.get("/icon/:address", serverIconRoute);
+router.get("/icon/:address", serverIconRoute);

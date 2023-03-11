@@ -19,7 +19,7 @@ describe("getSRVPort Non-Default Port", () => {
 
 describe("getSRVPort Errored", () => {
     it("should return port number 25565", async () => {
-        const host: string = "example.com";
+        const host: string = "example.test";
         const port: number = await getSRVPort(host);
         expect(port).not.toBe(25566);
     });
@@ -71,7 +71,7 @@ describe("getMCStatus", () => {
 
     it("should return an offline status response", async () => {
         const serverInfo: ServerInfo = {
-            host: "example.com",
+            host: "example.test",
             port: 25565
         };
 
