@@ -1,6 +1,6 @@
 import { MinecraftServerListPing } from "minecraft-status";
 import Query from "minecraft-query";
-import motdParser from '@sfirew/mc-motd-parser'
+import motdParser from '@sfirew/minecraft-motd-parser'
 import dnsPromises from 'dns';
 import { ping } from 'bedrock-protocol';
 

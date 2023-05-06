@@ -1,6 +1,6 @@
 import express, { Router } from "express";
 import bodyParser from "body-parser";
-import motdParser from '@sfirew/mc-motd-parser'
+import motdParser from '@sfirew/minecraft-motd-parser'
 
 import { getMCStatus, ServerInfo } from "./mcstatus.js";
 
