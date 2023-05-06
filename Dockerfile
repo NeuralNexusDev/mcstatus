@@ -6,7 +6,7 @@ COPY package.json ./
 
 COPY package-lock.json ./
 
-RUN apt-get update && apt-get install cmake -y && npm install
+RUN apt-get update && apt-get install cmake -y && npm ci
 
 COPY ./lib ./lib
 
