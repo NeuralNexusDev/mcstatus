@@ -2,11 +2,9 @@ FROM golang:1.21
 
 WORKDIR /app
 
-ARG GIN_MODE=release
+COPY ./icons ./icons
 
-COPY ./icons ./
-
-COPY ./templates ./
+COPY ./templates ./templates
 
 COPY go.mod go.sum ./
 

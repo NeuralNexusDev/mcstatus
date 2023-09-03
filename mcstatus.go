@@ -50,7 +50,7 @@ var offlineBedrockResponse StausResponse = StausResponse{
 func main() {
 	// Initialize env variables and constants
 	if SERVER_URL == "" {
-		SERVER_URL = "/" // "https://api.neuralnexus.dev/api/v1/mcstatus"
+		SERVER_URL = "/"
 	}
 	if SERVER_URL[len(SERVER_URL)-1:] == "/" {
 		SERVER_URL = SERVER_URL[:len(SERVER_URL)-1]
@@ -149,6 +149,12 @@ func getParams(c *gin.Context) ServerInfo {
 		is_bedrock = false
 	}
 
+	// Get enable_query from params
+	enable_query, err := strconv.ParseBool(c.Query("enable_query"))
+	if err != nil {
+		enable_query = true
+	}
+
 	// Get port from params
 	portString := c.Param("port")
 
@@ -183,7 +189,7 @@ func getParams(c *gin.Context) ServerInfo {
 	return ServerInfo{
 		Host:        address,
 		Port:        int(port),
-		EnableQuery: true,
+		EnableQuery: enable_query,
 		QueryPort:   int(query_port),
 		IsBedrock:   is_bedrock,
 	}
@@ -260,7 +266,6 @@ func parsePlayersQuery(players []string) []Player {
 }
 
 // Get Java server status
-// TODO: Parse JSON MOTD (17)
 func JavaServerStatus(serverInfo ServerInfo) (StausResponse, image.Image, error) {
 	// Create a new pinger
 	pinger := minequery.NewPinger(
@@ -380,6 +385,7 @@ func getIcon(c *gin.Context) {
 	if serverInfo.IsBedrock {
 		// Get Bedrock icon
 		icon = bedrockIcon
+		status = http.StatusNoContent
 	} else {
 		// Get Java server status
 		_, image, err := JavaServerStatus(serverInfo)
@@ -401,8 +407,6 @@ func getIcon(c *gin.Context) {
 }
 
 // Route that returns the server status
-// TODO: Add basic response caching for query status
-// TODO: Add protobuf support
 func getServerStatus(c *gin.Context) {
 	// Get the query params
 	serverInfo := getParams(c)
@@ -456,6 +460,10 @@ func getServerStatus(c *gin.Context) {
 		if serverInfo.QueryPort != serverInfo.Port {
 			queryParams = append(queryParams, "query_port="+fmt.Sprint(serverInfo.QueryPort))
 		}
+		if !serverInfo.EnableQuery {
+			queryParams = append(queryParams, "enable_query=false")
+		}
+
 		// Format the query params
 		var queryParamsString string = ""
 		if len(queryParams) > 0 {

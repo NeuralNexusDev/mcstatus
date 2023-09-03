@@ -6,6 +6,8 @@ services:
     container_name: NN_mcstatus
     environment:
       - TZ=UTC
+      - GIN_MODE=release
+      - SERVER_URL=/
     ports:
       - "0.0.0.0:3001:3001"
     restart: unless-stopped
