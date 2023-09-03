@@ -1,22 +1,7 @@
 <!DOCTYPE html>
 <meta content="IP: {{ADDRESS}}" property="og:title" />
 <meta content="Powered by NeuralNexus.dev" property="og:site_name">
-<meta property="og:description" content="{{MOTD_TEXT}}\nPlayers: {{ONLINE_PLAYERS}}\nVersion: {{VERSION}}"/>
+<meta property="og:description" content="{{MOTD_TEXT}}\\nPlayers: {{ONLINE_PLAYERS}}\\nVersion: {{VERSION}}"/>
 <meta content="{{SERVER_URL}}/{{ADDRESS_STR}}" property="og:url" />
-<meta content="{{SERVER_URL}}/icon/{{ADDRESS_STR}}" property="og:image" />
+<meta content="{{FAVICON}}" property="og:image" />
 <meta content="#7C0014" data-react-helmet="true" name="theme-color" />
-
-
-// Build response address string
-let addressStr = port ? `${address}?port=${port}` : address;
-if (queryPort) {
-    addressStr = port ? `${addressStr}&query=${queryPort}` : `${addressStr}?query=${queryPort}`;
-    if (isBedrock) {
-        addressStr = `${addressStr}&is_bedrock=${isBedrock}`;
-    }
-} else if (isBedrock) {
-    addressStr = port ? `${addressStr}&is_bedrock=${isBedrock}` : `${addressStr}?is_bedrock=${isBedrock}`;
-    if (queryPort) {
-        addressStr = `${addressStr}&query=${queryPort}`;
-    }
-}

@@ -60,3 +60,4 @@ Just to note, bedrock doesn't support server icons, so this will return a 204 No
 - Redo the response spec when the game status API has been redone
 - Add basic response caching for query status
 - Parse JSON MOTD (17)
+- Sanitize the section symbols (§) from the MOTD for embeds

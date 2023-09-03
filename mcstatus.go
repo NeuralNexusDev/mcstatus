@@ -476,9 +476,10 @@ func getServerStatus(c *gin.Context) {
 		htmlString = strings.ReplaceAll(htmlString, "{{SERVER_URL}}", SERVER_URL)
 		htmlString = strings.ReplaceAll(htmlString, "{{ADDRESS}}", resp.Connect)
 		htmlString = strings.ReplaceAll(htmlString, "{{ONLINE_PLAYERS}}", fmt.Sprint(resp.OnlinePlayers))
-		htmlString = strings.ReplaceAll(htmlString, "{{MOTD_TEXT}}", strings.ReplaceAll(resp.Name, "§.", ""))
+		htmlString = strings.ReplaceAll(htmlString, "{{MOTD_TEXT}}", strings.ReplaceAll(resp.Name, "\n", "\\n"))
 		htmlString = strings.ReplaceAll(htmlString, "{{VERSION}}", resp.Version)
 		htmlString = strings.ReplaceAll(htmlString, "{{ADDRESS_STR}}", c.Param("address")+queryParamsString)
+		htmlString = strings.ReplaceAll(htmlString, "{{FAVICON}}", resp.Favicon)
 
 		// Serve the html
 		c.Header("Content-Type", "text/html")
