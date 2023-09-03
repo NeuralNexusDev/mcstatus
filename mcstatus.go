@@ -56,6 +56,18 @@ func main() {
 		SERVER_URL = SERVER_URL[:len(SERVER_URL)-1]
 	}
 
+	// Get IP from env
+	ip := os.Getenv("IP_ADDRESS")
+	if ip == "" {
+		ip = "0.0.0.0"
+	}
+
+	// Get port from env
+	port := os.Getenv("REST_PORT")
+	if port == "" {
+		port = "3001"
+	}
+
 	var router *gin.Engine = gin.Default()
 
 	// Minecraft Server Status
@@ -63,17 +75,18 @@ func main() {
 	router.GET("/:address", getServerStatus)
 	router.GET("/icon/:address", getIcon)
 
-	router.Run("0.0.0.0:8080")
+	router.Run(ip + ":" + port)
 }
 
 // -------------- Structs --------------
 
 // ServerInfo contains the server info
 type ServerInfo struct {
-	Host      string `json:"host"`
-	Port      int    `json:"port"`
-	QueryPort int    `json:"query_port"`
-	IsBedrock bool   `json:"is_bedrock"`
+	Host        string `json:"host"`
+	Port        int    `json:"port"`
+	EnableQuery bool   `json:"enable_query"`
+	QueryPort   int    `json:"query_port"`
+	IsBedrock   bool   `json:"is_bedrock"`
 }
 
 // Simple Player definition
@@ -168,10 +181,11 @@ func getParams(c *gin.Context) ServerInfo {
 
 	// Return the server info
 	return ServerInfo{
-		Host:      address,
-		Port:      int(port),
-		QueryPort: int(query_port),
-		IsBedrock: is_bedrock,
+		Host:        address,
+		Port:        int(port),
+		EnableQuery: true,
+		QueryPort:   int(query_port),
+		IsBedrock:   is_bedrock,
 	}
 }
 
@@ -179,10 +193,10 @@ func getParams(c *gin.Context) ServerInfo {
 
 // Get Bedrock server status
 func BedrockServerStatus(serverInfo ServerInfo) (StausResponse, image.Image, error) {
-	// return bedrockping.Query(address+":"+fmt.Sprint(port), 5*time.Second, 150*time.Millisecond)
-
+	// Build the connect string
 	connect := serverInfo.Host + ":" + fmt.Sprint(serverInfo.Port)
 
+	// Get the server status
 	respB, err := bedrockping.Query(connect, 5*time.Second, 150*time.Millisecond)
 	if err != nil {
 		return offlineBedrockResponse, defaultIcon, err
@@ -191,7 +205,7 @@ func BedrockServerStatus(serverInfo ServerInfo) (StausResponse, image.Image, err
 	// Get the server name
 	serverName := respB.ServerName
 	if len(respB.Extra) > 1 {
-		serverName += " " + respB.Extra[1]
+		serverName += "\\n" + respB.Extra[1]
 	}
 
 	var mapName string = ""
@@ -213,8 +227,8 @@ func BedrockServerStatus(serverInfo ServerInfo) (StausResponse, image.Image, err
 	}, bedrockIcon, nil
 }
 
-// Parse players
-func parsePlayers(players []minequery.PlayerEntry17) []Player {
+// Parse players from Ping17 response
+func parsePlayers17(players []minequery.PlayerEntry17) []Player {
 	// Create a new array of players
 	var playerList []Player = []Player{}
 
@@ -229,11 +243,30 @@ func parsePlayers(players []minequery.PlayerEntry17) []Player {
 	return playerList
 }
 
+// Parse players from Query response
+func parsePlayersQuery(players []string) []Player {
+	// Create a new array of players
+	var playerList []Player = []Player{}
+
+	// Loop through the players
+	for _, player := range players {
+		// Append the player to the player list
+		playerList = append(playerList, Player{
+			Name: player,
+		})
+	}
+
+	return playerList
+}
+
 // Get Java server status
+// TODO: Parse JSON MOTD (17)
 func JavaServerStatus(serverInfo ServerInfo) (StausResponse, image.Image, error) {
 	// Create a new pinger
 	pinger := minequery.NewPinger(
-		minequery.WithTimeout(5 * time.Second),
+		minequery.WithTimeout(5*time.Second),
+		minequery.WithProtocolVersion16(minequery.Ping16ProtocolVersion162),
+		minequery.WithProtocolVersion17(minequery.Ping17ProtocolVersion119),
 	)
 
 	// Default struct data
@@ -251,29 +284,16 @@ func JavaServerStatus(serverInfo ServerInfo) (StausResponse, image.Image, error)
 
 	// Now the glorious if else chain
 	var icon image.Image
+
 	resp17, err := pinger.Ping17(serverInfo.Host, serverInfo.Port)
 	if err != nil {
-		// Load the default icon from the filesystem
-		icon, err = loadImgFromFile("./icons/default.png")
-
 		resp16, err := pinger.Ping16(serverInfo.Host, serverInfo.Port)
 		if err != nil {
 			resp14, err := pinger.Ping14(serverInfo.Host, serverInfo.Port)
 			if err != nil {
 				resp15, err := pinger.PingBeta18(serverInfo.Host, serverInfo.Port)
 				if err != nil {
-					// Now try for Bedrock
-					respB, bImage, err := BedrockServerStatus(serverInfo)
-					if err != nil {
-						// Try bedrock on 19132
-						serverInfo.Port = 19132
-						respB, bImage, err := BedrockServerStatus(serverInfo)
-						if err != nil {
-							return offlineJavaResponse, icon, err
-						}
-						return respB, bImage, nil
-					}
-					return respB, bImage, nil
+					return offlineJavaResponse, defaultIcon, err
 				}
 				statusResponse.Name = resp15.MOTD
 				statusResponse.MaxPlayers = resp15.MaxPlayers
@@ -291,12 +311,23 @@ func JavaServerStatus(serverInfo ServerInfo) (StausResponse, image.Image, error)
 		statusResponse.Version = resp16.ServerVersion
 	} else {
 		icon = resp17.Icon
-		statusResponse.Name = resp17.Description.String()
+		statusResponse.Name = strings.ReplaceAll(resp17.Description.String(), "\n", "\\n")
 		statusResponse.MaxPlayers = resp17.MaxPlayers
 		statusResponse.OnlinePlayers = resp17.OnlinePlayers
-		statusResponse.Players = parsePlayers(resp17.SamplePlayers)
+		statusResponse.Players = parsePlayers17(resp17.SamplePlayers)
 		statusResponse.Version = resp17.VersionName
 		statusResponse.Favicon = imgToBase64(icon)
+	}
+
+	if serverInfo.EnableQuery {
+		respQuery, err := pinger.QueryFull(serverInfo.Host, serverInfo.QueryPort)
+		if err == nil {
+			statusResponse.Name = respQuery.MOTD
+			statusResponse.MaxPlayers = respQuery.MaxPlayers
+			statusResponse.OnlinePlayers = respQuery.OnlinePlayers
+			statusResponse.Players = parsePlayersQuery(respQuery.SamplePlayers)
+			statusResponse.Version = respQuery.Version
+		}
 	}
 
 	return statusResponse, icon, nil
@@ -307,7 +338,14 @@ func ServerStatus(serverInfo ServerInfo) (StausResponse, image.Image, error) {
 	if serverInfo.IsBedrock {
 		return BedrockServerStatus(serverInfo)
 	}
-	return JavaServerStatus(serverInfo)
+	serverStatus, icon, err := JavaServerStatus(serverInfo)
+	if err != nil {
+		BServerStatus, Bicon, err := BedrockServerStatus(serverInfo)
+		if err == nil {
+			return BServerStatus, Bicon, nil
+		}
+	}
+	return serverStatus, icon, nil
 }
 
 // -------------- Routes --------------
@@ -315,7 +353,7 @@ func ServerStatus(serverInfo ServerInfo) (StausResponse, image.Image, error) {
 // Route that returns general API info
 func getRoot(c *gin.Context) {
 	// Read the html file
-	html, err := os.ReadFile("index.html")
+	html, err := os.ReadFile("templates/index.html")
 	if err != nil {
 		c.String(http.StatusInternalServerError, err.Error())
 	}
@@ -333,18 +371,15 @@ func getRoot(c *gin.Context) {
 func getIcon(c *gin.Context) {
 	// Get the query params
 	serverInfo := getParams(c)
+	serverInfo.EnableQuery = false
 
 	var icon image.Image
 	var status int = http.StatusOK
-	var err error
 
 	// Get the server status
 	if serverInfo.IsBedrock {
-		// Load the bedrock icon from the filesystem (Bedrock doesn't have a server icon)
-		icon, err = loadImgFromFile("./icons/bedrock.png")
-		if err != nil {
-			c.String(http.StatusInternalServerError, err.Error())
-		}
+		// Get Bedrock icon
+		icon = bedrockIcon
 	} else {
 		// Get Java server status
 		_, image, err := JavaServerStatus(serverInfo)
@@ -353,12 +388,8 @@ func getIcon(c *gin.Context) {
 			// Set the icon as the server icon
 			icon = image
 		} else {
-			// Load the default icon from the filesystem
-			img, err := loadImgFromFile("./icons/default.png")
-			if err != nil {
-				c.String(http.StatusInternalServerError, err.Error())
-			}
-			icon = img
+			// Set the icon as the default icon
+			icon = defaultIcon
 			status = http.StatusNotFound
 		}
 	}
@@ -369,19 +400,75 @@ func getIcon(c *gin.Context) {
 	png.Encode(c.Writer, icon)
 }
 
-// TODO Get Embeds working
 // Route that returns the server status
+// TODO: Add basic response caching for query status
+// TODO: Add protobuf support
 func getServerStatus(c *gin.Context) {
 	// Get the query params
 	serverInfo := getParams(c)
 
 	var status int = http.StatusOK
 
-	// Fix this error handling later
+	// Get the server status
 	resp, _, err := ServerStatus(serverInfo)
 	if err != nil {
 		status = http.StatusNotFound
 	}
 
-	c.IndentedJSON(status, resp)
+	// Check the request type
+	if strings.Split(c.Request.Header.Get("Accept"), ",")[0] == "application/json" {
+		// Serve the json
+		c.Header("Content-Type", "application/json")
+		c.IndentedJSON(status, resp)
+		return
+	} else if strings.Split(c.Request.Header.Get("Accept"), ",")[0] == "text/html" {
+		html, err := os.ReadFile("templates/status.html")
+		if err != nil {
+			c.String(http.StatusInternalServerError, err.Error())
+		}
+
+		// Replace the placeholders
+		htmlString := string(html)
+		htmlString = strings.ReplaceAll(htmlString, "{{SERVER_URL}}", SERVER_URL)
+		htmlString = strings.ReplaceAll(htmlString, "{{ADDRESS}}", resp.Connect)
+		htmlString = strings.ReplaceAll(htmlString, "{{MOTD}}", resp.Name)
+		htmlString = strings.ReplaceAll(htmlString, "{{FAVICON}}", resp.Favicon)
+		htmlString = strings.ReplaceAll(htmlString, "{{ONLINE_PLAYERS}}", fmt.Sprint(resp.OnlinePlayers))
+		htmlString = strings.ReplaceAll(htmlString, "{{MAX_PLAYERS}}", fmt.Sprint(resp.MaxPlayers))
+
+		// Serve the html
+		c.Header("Content-Type", "text/html")
+		c.String(status, htmlString)
+	} else {
+		html, err := os.ReadFile("templates/embed.html")
+		if err != nil {
+			c.String(http.StatusInternalServerError, err.Error())
+		}
+
+		// Build response address string
+		var queryParams []string = []string{}
+		if serverInfo.IsBedrock {
+			queryParams = append(queryParams, "is_bedrock=true")
+		}
+		if serverInfo.Port != 25565 {
+			queryParams = append(queryParams, "port="+fmt.Sprint(serverInfo.Port))
+		}
+		if serverInfo.QueryPort != serverInfo.Port {
+			queryParams = append(queryParams, "query_port="+fmt.Sprint(serverInfo.QueryPort))
+		}
+		// Format the query params
+		var queryParamsString string = ""
+		if len(queryParams) > 0 {
+			queryParamsString = "?" + strings.Join(queryParams, "&")
+		}
+
+		// Replace the placeholders
+		htmlString := string(html)
+		htmlString = strings.ReplaceAll(htmlString, "{{SERVER_URL}}", SERVER_URL)
+		htmlString = strings.ReplaceAll(htmlString, "{{ADDRESS}}", resp.Connect)
+		htmlString = strings.ReplaceAll(htmlString, "{{ONLINE_PLAYERS}}", fmt.Sprint(resp.OnlinePlayers))
+		htmlString = strings.ReplaceAll(htmlString, "{{MOTD_TEXT}}", strings.ReplaceAll(resp.Name, "§.", ""))
+		htmlString = strings.ReplaceAll(htmlString, "{{VERSION}}", resp.Version)
+		htmlString = strings.ReplaceAll(htmlString, "{{ADDRESS_STR}}", c.Param("address")+queryParamsString)
+	}
 }

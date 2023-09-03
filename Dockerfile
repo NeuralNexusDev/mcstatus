@@ -1,21 +1,19 @@
-FROM node:18
+FROM golang:1.21
 
 WORKDIR /app
 
-COPY package.json ./
+ARG GIN_MODE=release
 
-COPY package-lock.json ./
+COPY ./icons ./
 
-RUN apt-get update && apt-get install cmake -y && npm ci
+COPY ./templates ./
 
-COPY ./lib ./lib
+COPY go.mod go.sum ./
 
-COPY index.ts ./
+RUN go mod download
 
-COPY tsconfig.json ./
+COPY *.go ./
 
-COPY tsconfig.build.json ./
+RUN CGO_ENABLED=0 GOOS=linux go build -o /mcstatus
 
-RUN /app/node_modules/typescript/bin/tsc -p /app/tsconfig.build.json
-
-CMD ["node", "./dist/index.js"]
+CMD ["/mcstatus"]
