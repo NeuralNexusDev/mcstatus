@@ -419,6 +419,9 @@ func getServerStatus(c *gin.Context) {
 		status = http.StatusNotFound
 	}
 
+	// Print request Accept header
+	fmt.Println(c.Request.Header.Get("Accept"))
+
 	// Check the request type
 	if strings.Split(c.Request.Header.Get("Accept"), ",")[0] == "application/json" {
 		// Serve the json
