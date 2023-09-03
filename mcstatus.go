@@ -419,9 +419,6 @@ func getServerStatus(c *gin.Context) {
 		status = http.StatusNotFound
 	}
 
-	// Print request Accept header
-	fmt.Println(c.Request.Header.Get("Accept"))
-
 	// Check the request type
 	if strings.Split(c.Request.Header.Get("Accept"), ",")[0] == "application/json" {
 		// Serve the json
@@ -446,6 +443,7 @@ func getServerStatus(c *gin.Context) {
 		// Serve the html
 		c.Header("Content-Type", "text/html")
 		c.String(status, htmlString)
+		return
 	} else {
 		html, err := os.ReadFile("templates/embed.html")
 		if err != nil {
@@ -481,5 +479,9 @@ func getServerStatus(c *gin.Context) {
 		htmlString = strings.ReplaceAll(htmlString, "{{MOTD_TEXT}}", strings.ReplaceAll(resp.Name, "§.", ""))
 		htmlString = strings.ReplaceAll(htmlString, "{{VERSION}}", resp.Version)
 		htmlString = strings.ReplaceAll(htmlString, "{{ADDRESS_STR}}", c.Param("address")+queryParamsString)
+
+		// Serve the html
+		c.Header("Content-Type", "text/html")
+		c.String(status, htmlString)
 	}
 }

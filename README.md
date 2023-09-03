@@ -36,7 +36,7 @@ Returns:
     ],
     "connect": "neuralnexus.dev",
     "version": "1.16.5",
-    "favicon": "data:image/png;base64,iVBORw0KGgoAAA
+    "favicon": "data:image/png;base64,iVBORw0KGgoAAA"
 }
 ```
 
