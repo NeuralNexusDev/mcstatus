@@ -61,3 +61,6 @@ Just to note, bedrock doesn't support server icons, so this will return a 204 No
 - Add basic response caching for query status
 - Parse JSON MOTD (17)
 - Sanitize the section symbols (§) from the MOTD for embeds
+- Disable query check when sending an embed (unless explixitly specified as true)
+- [Set up some tests](https://pkg.go.dev/testing)
+- Set internal server error to show the error message as JSON
