@@ -107,6 +107,12 @@ type StausResponse struct {
 	ServerType    string   `json:"server_type"`
 }
 
+// Error response
+type ErrorResponse struct {
+	Succes bool   `json:"success"`
+	Error  string `json:"error"`
+}
+
 // -------------- Functions --------------
 
 // Convert image.Image to base64 string
@@ -360,7 +366,7 @@ func getRoot(c *gin.Context) {
 	// Read the html file
 	html, err := os.ReadFile("templates/index.html")
 	if err != nil {
-		c.String(http.StatusInternalServerError, err.Error())
+		c.IndentedJSON(http.StatusInternalServerError, ErrorResponse{Succes: false, Error: err.Error()})
 	}
 
 	// Replace the server url
@@ -433,7 +439,7 @@ func getServerStatus(c *gin.Context) {
 	} else if strings.Split(c.Request.Header.Get("Accept"), ",")[0] == "text/html" {
 		html, err := os.ReadFile("templates/status.html")
 		if err != nil {
-			c.String(http.StatusInternalServerError, err.Error())
+			c.IndentedJSON(http.StatusInternalServerError, ErrorResponse{Succes: false, Error: err.Error()})
 		}
 
 		// Replace the placeholders
@@ -452,7 +458,7 @@ func getServerStatus(c *gin.Context) {
 	} else {
 		html, err := os.ReadFile("templates/embed.html")
 		if err != nil {
-			c.String(http.StatusInternalServerError, err.Error())
+			c.IndentedJSON(http.StatusInternalServerError, ErrorResponse{Succes: false, Error: err.Error()})
 		}
 
 		// Build response address string

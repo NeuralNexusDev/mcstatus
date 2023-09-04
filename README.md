@@ -62,4 +62,3 @@ Just to note, bedrock doesn't support server icons, so this will return a 204 No
 - Parse JSON MOTD (17)
 - Sanitize the section symbols (§) from the MOTD for embeds
 - [Set up some tests](https://pkg.go.dev/testing)
-- Set internal server error to show the error message as JSON
