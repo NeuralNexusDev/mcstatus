@@ -3,9 +3,11 @@ package main
 import (
 	"bytes"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"image"
 	"image/png"
+	"io"
 	"net/http"
 	"os"
 	"strconv"
@@ -82,7 +84,7 @@ func main() {
 
 // ServerInfo contains the server info
 type ServerInfo struct {
-	Host        string `json:"host"`
+	Address     string `json:"address"`
 	Port        int    `json:"port"`
 	EnableQuery bool   `json:"enable_query"`
 	QueryPort   int    `json:"query_port"`
@@ -148,7 +150,7 @@ func loadImgFromFile(path string) (image.Image, error) {
 }
 
 // Get params
-func getParams(c *gin.Context) ServerInfo {
+func getServerInfo(c *gin.Context) ServerInfo {
 	// Get is_bedrock from params
 	is_bedrock, err := strconv.ParseBool(c.Query("is_bedrock"))
 	if err != nil {
@@ -176,7 +178,7 @@ func getParams(c *gin.Context) ServerInfo {
 	}
 
 	// Parse the port
-	port, err := strconv.ParseInt(portString, 10, 16)
+	port, err := strconv.Atoi(portString)
 	if err != nil {
 		if is_bedrock {
 			port = 19132
@@ -186,19 +188,64 @@ func getParams(c *gin.Context) ServerInfo {
 	}
 
 	// Get query port from params
-	query_port, err := strconv.ParseInt(c.Query("query_port"), 10, 16)
+	query_port, err := strconv.Atoi(c.Query("query_port"))
 	if err != nil {
 		query_port = port
 	}
 
 	// Return the server info
-	return ServerInfo{
-		Host:        address,
-		Port:        int(port),
+	var serverInfo ServerInfo = ServerInfo{
+		Address:     address,
+		Port:        port,
 		EnableQuery: enable_query,
-		QueryPort:   int(query_port),
+		QueryPort:   query_port,
 		IsBedrock:   is_bedrock,
 	}
+
+	// Get the request body
+	body, err := io.ReadAll(c.Request.Body)
+	if err == nil {
+		bodyString := string(body)
+
+		// Convert the body to a map
+		var bodyMap map[string]interface{}
+		err = json.Unmarshal([]byte(bodyString), &bodyMap)
+		if err == nil {
+			// Get address from body
+			if bodyMap["address"] != nil {
+				serverInfo.Address = bodyMap["address"].(string)
+			}
+
+			// Get port from body
+			if bodyMap["port"] != nil {
+				serverInfo.Port = int(bodyMap["port"].(float64))
+			}
+
+			// Get query_port from body
+			if bodyMap["query_port"] != nil {
+				serverInfo.QueryPort = int(bodyMap["query_port"].(float64))
+			} else {
+				serverInfo.QueryPort = port
+			}
+
+			// Get is_bedrock from body
+			if bodyMap["is_bedrock"] != nil {
+				serverInfo.IsBedrock = bodyMap["is_bedrock"].(bool)
+			} else {
+				is_bedrock = false
+			}
+
+			// Get enable_query from body
+			if bodyMap["enable_query"] != nil {
+				serverInfo.EnableQuery = bodyMap["enable_query"].(bool)
+			} else {
+				enable_query = true
+			}
+		}
+	}
+
+	// Return the server info
+	return serverInfo
 }
 
 // -------------- Status --------------
@@ -206,7 +253,7 @@ func getParams(c *gin.Context) ServerInfo {
 // Get Bedrock server status
 func BedrockServerStatus(serverInfo ServerInfo) (StausResponse, image.Image, error) {
 	// Build the connect string
-	connect := serverInfo.Host + ":" + fmt.Sprint(serverInfo.Port)
+	connect := serverInfo.Address + ":" + fmt.Sprint(serverInfo.Port)
 
 	// Get the server status
 	respB, err := bedrockping.Query(connect, 5*time.Second, 150*time.Millisecond)
@@ -287,7 +334,7 @@ func JavaServerStatus(serverInfo ServerInfo) (StausResponse, image.Image, error)
 		MaxPlayers:    0,
 		OnlinePlayers: 0,
 		Players:       []Player{},
-		Connect:       serverInfo.Host + ":" + fmt.Sprint(serverInfo.Port),
+		Connect:       serverInfo.Address + ":" + fmt.Sprint(serverInfo.Port),
 		Version:       "",
 		Favicon:       "",
 		ServerType:    "java",
@@ -296,13 +343,13 @@ func JavaServerStatus(serverInfo ServerInfo) (StausResponse, image.Image, error)
 	// Now the glorious if else chain
 	var icon image.Image
 
-	resp17, err := pinger.Ping17(serverInfo.Host, serverInfo.Port)
+	resp17, err := pinger.Ping17(serverInfo.Address, serverInfo.Port)
 	if err != nil {
-		resp16, err := pinger.Ping16(serverInfo.Host, serverInfo.Port)
+		resp16, err := pinger.Ping16(serverInfo.Address, serverInfo.Port)
 		if err != nil {
-			resp14, err := pinger.Ping14(serverInfo.Host, serverInfo.Port)
+			resp14, err := pinger.Ping14(serverInfo.Address, serverInfo.Port)
 			if err != nil {
-				resp15, err := pinger.PingBeta18(serverInfo.Host, serverInfo.Port)
+				resp15, err := pinger.PingBeta18(serverInfo.Address, serverInfo.Port)
 				if err != nil {
 					return offlineJavaResponse, defaultIcon, err
 				}
@@ -331,7 +378,7 @@ func JavaServerStatus(serverInfo ServerInfo) (StausResponse, image.Image, error)
 	}
 
 	if serverInfo.EnableQuery {
-		respQuery, err := pinger.QueryFull(serverInfo.Host, serverInfo.QueryPort)
+		respQuery, err := pinger.QueryFull(serverInfo.Address, serverInfo.QueryPort)
 		if err == nil {
 			statusResponse.Name = respQuery.MOTD
 			statusResponse.MaxPlayers = respQuery.MaxPlayers
@@ -363,25 +410,32 @@ func ServerStatus(serverInfo ServerInfo) (StausResponse, image.Image, error) {
 
 // Route that returns general API info
 func getRoot(c *gin.Context) {
-	// Read the html file
-	html, err := os.ReadFile("templates/index.html")
-	if err != nil {
-		c.IndentedJSON(http.StatusInternalServerError, ErrorResponse{Succes: false, Error: err.Error()})
+	// Check the request type
+	if strings.Split(c.Request.Header.Get("Accept"), ",")[0] == "application/json" {
+		getServerStatus(c)
+		return
+	} else {
+
+		// Read the html file
+		html, err := os.ReadFile("templates/index.html")
+		if err != nil {
+			c.IndentedJSON(http.StatusInternalServerError, ErrorResponse{Succes: false, Error: err.Error()})
+		}
+
+		// Replace the server url
+		htmlString := string(html)
+		htmlString = strings.ReplaceAll(htmlString, "{{SERVER_URL}}", SERVER_URL)
+
+		// Serve the html
+		c.Header("Content-Type", "text/html")
+		c.String(http.StatusOK, htmlString)
 	}
-
-	// Replace the server url
-	htmlString := string(html)
-	htmlString = strings.ReplaceAll(htmlString, "{{SERVER_URL}}", SERVER_URL)
-
-	// Serve the html
-	c.Header("Content-Type", "text/html")
-	c.String(http.StatusOK, htmlString)
 }
 
 // Route that returns the server icon as a PNG (base64 encoded string didn't work for some reason)
 func getIcon(c *gin.Context) {
 	// Get the query params
-	serverInfo := getParams(c)
+	serverInfo := getServerInfo(c)
 	serverInfo.EnableQuery = false
 
 	var icon image.Image
@@ -414,8 +468,14 @@ func getIcon(c *gin.Context) {
 
 // Route that returns the server status
 func getServerStatus(c *gin.Context) {
+	// Check if the address is icon
+	if c.Param("address") == "icon" {
+		getIcon(c)
+		return
+	}
+
 	// Get the query params
-	serverInfo := getParams(c)
+	serverInfo := getServerInfo(c)
 
 	// Disable query if there is no accept header (assume embed)
 	if strings.Split(c.Request.Header.Get("Accept"), ",")[0] == "" {
@@ -434,6 +494,9 @@ func getServerStatus(c *gin.Context) {
 	if strings.Split(c.Request.Header.Get("Accept"), ",")[0] == "application/json" {
 		// Serve the json
 		c.Header("Content-Type", "application/json")
+		if resp.Name == "Server Offline" {
+			status = http.StatusNotFound
+		}
 		c.IndentedJSON(status, resp)
 		return
 	} else if strings.Split(c.Request.Header.Get("Accept"), ",")[0] == "text/html" {
@@ -489,7 +552,11 @@ func getServerStatus(c *gin.Context) {
 		htmlString = strings.ReplaceAll(htmlString, "{{ONLINE_PLAYERS}}", fmt.Sprint(resp.OnlinePlayers))
 		htmlString = strings.ReplaceAll(htmlString, "{{MAX_PLAYERS}}", fmt.Sprint(resp.MaxPlayers))
 		htmlString = strings.ReplaceAll(htmlString, "{{MOTD_TEXT1}}", strings.Split(resp.Name, "\\n")[0])
-		htmlString = strings.ReplaceAll(htmlString, "{{MOTD_TEXT2}}", strings.Split(resp.Name, "\\n")[1])
+		var motd2String string = ""
+		if len(strings.Split(resp.Name, "\\n")) > 1 {
+			motd2String = strings.Split(resp.Name, "\\n")[1]
+		}
+		htmlString = strings.ReplaceAll(htmlString, "{{MOTD_TEXT2}}", motd2String)
 		htmlString = strings.ReplaceAll(htmlString, "{{VERSION}}", resp.Version)
 		htmlString = strings.ReplaceAll(htmlString, "{{ADDRESS_STR}}", c.Param("address")+queryParamsString)
 		htmlString = strings.ReplaceAll(htmlString, "{{FAVICON}}", resp.Favicon)

@@ -56,7 +56,6 @@ Just to note, bedrock doesn't support server icons, so this will return a 204 No
 ## TODO
 
 - Add protobuf support
-- Add REST body as a form of input
 - Redo the response spec when the game status API has been redone
 - Add basic response caching for query status
 - Parse JSON MOTD (17)
