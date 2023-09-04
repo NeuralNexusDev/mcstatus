@@ -19,7 +19,7 @@ Query Parameters:
 - `is_bedrock` - Whether the server is bedrock or not (default: false)
 - `query_enabled` - Whether the server has query enabled or not (default: true)
 
-Example: `https://api.neuralnexus.dev/api/v1/mcstatus/localhost?port=25566&query_port=25567&query_enabled=false`
+Example: `https://api.neuralnexus.dev/api/v1/mcstatus/{your.server.ip}?port=25566&query_port=25567&query_enabled=false`
 
 Returns:
 
@@ -49,7 +49,7 @@ Query Parameters:
 - `port` - The port of the server (default: 25565)
 - `is_bedrock` - Whether the server is bedrock or not (default: false)
 
-Example: `https://api.neuralnexus.dev/api/v1/mcstatus/icon/localhost?port=19127&is_bedrock=true`
+Example: `https://api.neuralnexus.dev/api/v1/mcstatus/icon/{your.server.ip}?port=19127&is_bedrock=true`
 
 Just to note, bedrock doesn't support server icons, so this will return a 204 No Content if the server is bedrock, allong with a picture of a bedrock block.
 
@@ -61,6 +61,5 @@ Just to note, bedrock doesn't support server icons, so this will return a 204 No
 - Add basic response caching for query status
 - Parse JSON MOTD (17)
 - Sanitize the section symbols (§) from the MOTD for embeds
-- Disable query check when sending an embed (unless explixitly specified as true)
 - [Set up some tests](https://pkg.go.dev/testing)
 - Set internal server error to show the error message as JSON

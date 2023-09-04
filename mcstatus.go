@@ -411,6 +411,11 @@ func getServerStatus(c *gin.Context) {
 	// Get the query params
 	serverInfo := getParams(c)
 
+	// Disable query if there is no accept header (assume embed)
+	if strings.Split(c.Request.Header.Get("Accept"), ",")[0] == "" {
+		serverInfo.EnableQuery = false
+	}
+
 	var status int = http.StatusOK
 
 	// Get the server status
